@@ -1,16 +1,70 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
 
 type Message = { role: "user" | "assistant"; content: string };
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
 
 export const useAIChat = () => {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
+
+  // Load conversation history on mount
+  useEffect(() => {
+    const loadHistory = async () => {
+      if (!user || historyLoaded) return;
+
+      const { data } = await supabase
+        .from("ai_conversations")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (data) {
+        setConversationId(data.id);
+        const savedMessages = data.messages as Message[];
+        if (Array.isArray(savedMessages) && savedMessages.length > 0) {
+          setMessages(savedMessages);
+        }
+      }
+      setHistoryLoaded(true);
+    };
+
+    loadHistory();
+  }, [user, historyLoaded]);
+
+  // Save messages to database
+  const saveMessages = useCallback(async (newMessages: Message[]) => {
+    if (!user) return;
+
+    if (conversationId) {
+      await supabase
+        .from("ai_conversations")
+        .update({ messages: newMessages as any, updated_at: new Date().toISOString() })
+        .eq("id", conversationId);
+    } else {
+      const { data } = await supabase
+        .from("ai_conversations")
+        .insert({ user_id: user.id, messages: newMessages as any })
+        .select()
+        .single();
+      
+      if (data) {
+        setConversationId(data.id);
+      }
+    }
+  }, [user, conversationId]);
 
   const sendMessage = useCallback(async (input: string) => {
     const userMsg: Message = { role: "user", content: input };
-    setMessages((prev) => [...prev, userMsg]);
+    const newMessages = [...messages, userMsg];
+    setMessages(newMessages);
     setIsLoading(true);
 
     let assistantSoFar = "";
@@ -35,7 +89,7 @@ export const useAIChat = () => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: [...messages, userMsg] }),
+        body: JSON.stringify({ messages: newMessages }),
       });
 
       if (!resp.ok || !resp.body) {
@@ -96,20 +150,32 @@ export const useAIChat = () => {
           }
         }
       }
+
+      // Save final conversation
+      setMessages((prev) => {
+        saveMessages(prev);
+        return prev;
+      });
     } catch (error) {
       console.error("AI chat error:", error);
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: "Произошла ошибка. Попробуйте ещё раз." },
-      ]);
+      const errorMessages = [...newMessages, { role: "assistant" as const, content: "Произошла ошибка. Попробуйте ещё раз." }];
+      setMessages(errorMessages);
+      saveMessages(errorMessages);
     } finally {
       setIsLoading(false);
     }
-  }, [messages]);
+  }, [messages, saveMessages]);
 
-  const clearMessages = useCallback(() => {
+  const clearMessages = useCallback(async () => {
     setMessages([]);
-  }, []);
+    if (conversationId) {
+      await supabase
+        .from("ai_conversations")
+        .delete()
+        .eq("id", conversationId);
+      setConversationId(null);
+    }
+  }, [conversationId]);
 
-  return { messages, isLoading, sendMessage, clearMessages };
+  return { messages, isLoading, sendMessage, clearMessages, historyLoaded };
 };

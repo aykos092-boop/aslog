@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Loader2, Bot, User, Trash2 } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, Bot, User, Trash2, History } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 export const AIChatBot = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
-  const { messages, isLoading, sendMessage, clearMessages } = useAIChat();
+  const { messages, isLoading, sendMessage, clearMessages, historyLoaded } = useAIChat();
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -80,7 +80,7 @@ export const AIChatBot = () => {
           {/* Messages */}
           <ScrollArea className="flex-1 p-4">
             <div className="space-y-4">
-              {messages.length === 0 && (
+              {messages.length === 0 && historyLoaded && (
                 <div className="text-center py-6">
                   <Bot className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
                   <p className="text-sm text-muted-foreground mb-4">
@@ -99,6 +99,13 @@ export const AIChatBot = () => {
                       </Button>
                     ))}
                   </div>
+                </div>
+              )}
+
+              {messages.length > 0 && (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                  <History className="h-3 w-3" />
+                  <span>История сохраняется автоматически</span>
                 </div>
               )}
 
