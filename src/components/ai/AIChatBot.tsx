@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { MessageCircle, X, Send, Loader2, Bot, User, Trash2, History } from "lucide-react";
+import { MessageCircle, X, Send, Loader2, Bot, User, Trash2, History, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -9,7 +9,8 @@ import { cn } from "@/lib/utils";
 export const AIChatBot = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState("");
-  const { messages, isLoading, sendMessage, clearMessages, historyLoaded } = useAIChat();
+  const [hoveredRating, setHoveredRating] = useState(0);
+  const { messages, isLoading, sendMessage, clearMessages, historyLoaded, canRate, rateResponse } = useAIChat();
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -21,6 +22,10 @@ export const AIChatBot = () => {
     if (!input.trim() || isLoading) return;
     sendMessage(input.trim());
     setInput("");
+  };
+
+  const handleRate = (rating: number) => {
+    rateResponse(rating);
   };
 
   const quickQuestions = [
@@ -151,6 +156,33 @@ export const AIChatBot = () => {
                   </div>
                   <div className="bg-muted rounded-2xl rounded-tl-sm px-3 py-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
+                  </div>
+                </div>
+              )}
+
+              {/* Rating prompt */}
+              {canRate && !isLoading && messages.length > 0 && messages[messages.length - 1]?.role === "assistant" && (
+                <div className="flex items-center justify-center gap-2 py-2 px-3 bg-muted/50 rounded-lg">
+                  <span className="text-xs text-muted-foreground">Оцените ответ:</span>
+                  <div className="flex gap-1">
+                    {[1, 2, 3, 4, 5].map((rating) => (
+                      <button
+                        key={rating}
+                        onClick={() => handleRate(rating)}
+                        onMouseEnter={() => setHoveredRating(rating)}
+                        onMouseLeave={() => setHoveredRating(0)}
+                        className="p-0.5 hover:scale-110 transition-transform"
+                      >
+                        <Star
+                          className={cn(
+                            "h-4 w-4 transition-colors",
+                            rating <= hoveredRating
+                              ? "fill-yellow-400 text-yellow-400"
+                              : "text-muted-foreground"
+                          )}
+                        />
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}

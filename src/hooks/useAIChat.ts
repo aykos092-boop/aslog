@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -12,6 +12,8 @@ export const useAIChat = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [lastLogId, setLastLogId] = useState<string | null>(null);
+  const startTimeRef = useRef<number>(0);
 
   // Load conversation history on mount
   useEffect(() => {
@@ -61,11 +63,41 @@ export const useAIChat = () => {
     }
   }, [user, conversationId]);
 
+  // Log chat for analytics
+  const logChat = useCallback(async (question: string, responseTimeMs: number) => {
+    if (!user) return null;
+
+    const { data } = await supabase
+      .from("ai_chat_logs")
+      .insert({
+        user_id: user.id,
+        question,
+        response_time_ms: responseTimeMs,
+      })
+      .select()
+      .single();
+
+    return data?.id || null;
+  }, [user]);
+
+  // Rate response
+  const rateResponse = useCallback(async (rating: number) => {
+    if (!lastLogId) return;
+
+    await supabase
+      .from("ai_chat_logs")
+      .update({ satisfaction_rating: rating })
+      .eq("id", lastLogId);
+
+    setLastLogId(null);
+  }, [lastLogId]);
+
   const sendMessage = useCallback(async (input: string) => {
     const userMsg: Message = { role: "user", content: input };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
     setIsLoading(true);
+    startTimeRef.current = Date.now();
 
     let assistantSoFar = "";
 
@@ -151,6 +183,11 @@ export const useAIChat = () => {
         }
       }
 
+      // Log analytics
+      const responseTime = Date.now() - startTimeRef.current;
+      const logId = await logChat(input, responseTime);
+      setLastLogId(logId);
+
       // Save final conversation
       setMessages((prev) => {
         saveMessages(prev);
@@ -164,10 +201,11 @@ export const useAIChat = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [messages, saveMessages]);
+  }, [messages, saveMessages, logChat]);
 
   const clearMessages = useCallback(async () => {
     setMessages([]);
+    setLastLogId(null);
     if (conversationId) {
       await supabase
         .from("ai_conversations")
@@ -177,5 +215,13 @@ export const useAIChat = () => {
     }
   }, [conversationId]);
 
-  return { messages, isLoading, sendMessage, clearMessages, historyLoaded };
+  return { 
+    messages, 
+    isLoading, 
+    sendMessage, 
+    clearMessages, 
+    historyLoaded,
+    canRate: !!lastLogId,
+    rateResponse,
+  };
 };

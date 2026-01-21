@@ -4,6 +4,7 @@ import { OrdersList } from "./OrdersList";
 import { MyDealsList } from "@/components/deals/MyDealsList";
 import { FavoriteCarriersList } from "@/components/favorites/FavoriteCarriersList";
 import { DeliveryCostCalculator } from "@/components/calculator/DeliveryCostCalculator";
+import { LoyaltyCard } from "@/components/loyalty/LoyaltyCard";
 
 export const ClientDashboard = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -16,7 +17,10 @@ export const ClientDashboard = () => {
     <div className="space-y-8">
       <div className="grid lg:grid-cols-2 gap-8">
         <CreateOrderForm onSuccess={handleOrderCreated} />
-        <DeliveryCostCalculator />
+        <div className="space-y-6">
+          <LoyaltyCard />
+          <DeliveryCostCalculator />
+        </div>
       </div>
       <MyDealsList />
       <FavoriteCarriersList />
