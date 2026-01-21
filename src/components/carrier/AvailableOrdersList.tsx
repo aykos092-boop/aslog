@@ -1,15 +1,22 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
-import { Package, MapPin, Calendar, Weight, Ruler, Send, Loader2, Eye, X } from "lucide-react";
+import { Package, MapPin, Calendar, Weight, Ruler, Send, Loader2, Eye, Search, Filter, X, CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Card,
   CardContent,
@@ -24,6 +31,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Order {
   id: string;
@@ -59,6 +73,13 @@ export const AvailableOrdersList = () => {
   const [deliveryTime, setDeliveryTime] = useState("");
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Filter state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [cargoTypeFilter, setCargoTypeFilter] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState<Date | undefined>();
+  const [dateTo, setDateTo] = useState<Date | undefined>();
+  const [showFilters, setShowFilters] = useState(false);
 
   const fetchOrders = async () => {
     if (!user) return;
@@ -109,6 +130,52 @@ export const AvailableOrdersList = () => {
   useEffect(() => {
     fetchOrders();
   }, [user]);
+
+  // Get unique cargo types for filter
+  const cargoTypes = useMemo(() => {
+    const types = [...new Set(orders.map(o => o.cargo_type))];
+    return types.sort();
+  }, [orders]);
+
+  // Filter orders based on search and filters
+  const filteredOrders = useMemo(() => {
+    return orders.filter(order => {
+      // Search query filter (route + cargo type)
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        const matchesRoute = 
+          order.pickup_address.toLowerCase().includes(query) ||
+          order.delivery_address.toLowerCase().includes(query);
+        const matchesCargo = order.cargo_type.toLowerCase().includes(query);
+        if (!matchesRoute && !matchesCargo) return false;
+      }
+
+      // Cargo type filter
+      if (cargoTypeFilter && cargoTypeFilter !== "all") {
+        if (order.cargo_type !== cargoTypeFilter) return false;
+      }
+
+      // Date range filter
+      const orderDate = new Date(order.pickup_date);
+      if (dateFrom && orderDate < dateFrom) return false;
+      if (dateTo) {
+        const endOfDay = new Date(dateTo);
+        endOfDay.setHours(23, 59, 59, 999);
+        if (orderDate > endOfDay) return false;
+      }
+
+      return true;
+    });
+  }, [orders, searchQuery, cargoTypeFilter, dateFrom, dateTo]);
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setCargoTypeFilter("all");
+    setDateFrom(undefined);
+    setDateTo(undefined);
+  };
+
+  const hasActiveFilters = searchQuery || cargoTypeFilter !== "all" || dateFrom || dateTo;
 
   const handleOpenResponse = (order: Order) => {
     setSelectedOrder(order);
@@ -192,16 +259,146 @@ export const AvailableOrdersList = () => {
     <>
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="w-5 h-5" />
-            Доступные заявки
-          </CardTitle>
-          <CardDescription>
-            {orders.length} заявок ожидают вашего отклика
-          </CardDescription>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Package className="w-5 h-5" />
+                Доступные заявки
+              </CardTitle>
+              <CardDescription>
+                {filteredOrders.length} из {orders.length} заявок
+                {hasActiveFilters && " (с учётом фильтров)"}
+              </CardDescription>
+            </div>
+            <Button
+              variant={showFilters ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <Filter className="w-4 h-4 mr-2" />
+              Фильтры
+              {hasActiveFilters && (
+                <Badge className="ml-2 bg-driver text-white">!</Badge>
+              )}
+            </Button>
+          </div>
+
+          {/* Filters Panel */}
+          {showFilters && (
+            <div className="mt-4 p-4 rounded-lg border bg-muted/30 space-y-4">
+              {/* Search */}
+              <div className="space-y-2">
+                <Label>Поиск по маршруту или грузу</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Москва, мебель, электроника..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+              </div>
+
+              <div className="grid sm:grid-cols-3 gap-4">
+                {/* Cargo Type Filter */}
+                <div className="space-y-2">
+                  <Label>Тип груза</Label>
+                  <Select value={cargoTypeFilter} onValueChange={setCargoTypeFilter}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Все типы" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Все типы</SelectItem>
+                      {cargoTypes.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Date From */}
+                <div className="space-y-2">
+                  <Label>Дата от</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !dateFrom && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateFrom ? format(dateFrom, "d MMM yyyy", { locale: ru }) : "Выбрать"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={dateFrom}
+                        onSelect={setDateFrom}
+                        initialFocus
+                        className="p-3 pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
+                {/* Date To */}
+                <div className="space-y-2">
+                  <Label>Дата до</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !dateTo && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dateTo ? format(dateTo, "d MMM yyyy", { locale: ru }) : "Выбрать"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={dateTo}
+                        onSelect={setDateTo}
+                        initialFocus
+                        className="p-3 pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+
+              {/* Clear Filters */}
+              {hasActiveFilters && (
+                <Button variant="ghost" size="sm" onClick={clearFilters}>
+                  <X className="w-4 h-4 mr-2" />
+                  Сбросить фильтры
+                </Button>
+              )}
+            </div>
+          )}
         </CardHeader>
         <CardContent className="space-y-4">
-          {orders.map((order) => (
+          {filteredOrders.length === 0 ? (
+            <div className="py-8 text-center text-muted-foreground">
+              <Search className="w-10 h-10 mx-auto mb-3 opacity-50" />
+              <p>Заявок по вашему запросу не найдено</p>
+              {hasActiveFilters && (
+                <Button variant="link" onClick={clearFilters} className="mt-2">
+                  Сбросить фильтры
+                </Button>
+              )}
+            </div>
+          ) : (
+            filteredOrders.map((order) => (
             <div
               key={order.id}
               className="p-4 rounded-xl border bg-card hover:shadow-md transition-shadow"
@@ -283,7 +480,8 @@ export const AvailableOrdersList = () => {
                 </div>
               </div>
             </div>
-          ))}
+          ))
+          )}
         </CardContent>
       </Card>
 
