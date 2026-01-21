@@ -1,8 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Truck, Menu, X } from "lucide-react";
 import { useState } from "react";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 
 export const Header = () => {
+  const { user, role } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
@@ -32,12 +35,26 @@ export const Header = () => {
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-3">
-            <Button variant="ghost" size="sm">
-              Войти
-            </Button>
-            <Button variant="hero" size="sm">
-              Начать бесплатно
-            </Button>
+          {user ? (
+              <Link to="/dashboard">
+                <Button variant="hero" size="sm">
+                  Личный кабинет
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <Link to="/auth">
+                  <Button variant="ghost" size="sm">
+                    Войти
+                  </Button>
+                </Link>
+                <Link to="/auth">
+                  <Button variant="hero" size="sm">
+                    Начать бесплатно
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -67,12 +84,26 @@ export const Header = () => {
                 Доверие
               </a>
               <div className="flex flex-col gap-2 pt-4">
-                <Button variant="outline" size="sm">
-                  Войти
-                </Button>
-                <Button variant="hero" size="sm">
-                  Начать бесплатно
-                </Button>
+              {user ? (
+                <Link to="/dashboard">
+                  <Button variant="hero" size="sm" className="w-full">
+                    Личный кабинет
+                  </Button>
+                </Link>
+              ) : (
+                <>
+                  <Link to="/auth">
+                    <Button variant="outline" size="sm" className="w-full">
+                      Войти
+                    </Button>
+                  </Link>
+                  <Link to="/auth">
+                    <Button variant="hero" size="sm" className="w-full">
+                      Начать бесплатно
+                    </Button>
+                  </Link>
+                </>
+              )}
               </div>
             </nav>
           </div>

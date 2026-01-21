@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Shield, MessageSquare, Star } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export const HeroSection = () => {
   return (
@@ -32,10 +33,12 @@ export const HeroSection = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16 animate-fade-in" style={{ animationDelay: "0.3s" }}>
-            <Button variant="hero" size="xl">
-              Начать бесплатно
-              <ArrowRight className="w-5 h-5" />
-            </Button>
+            <Link to="/auth">
+              <Button variant="hero" size="xl">
+                Начать бесплатно
+                <ArrowRight className="w-5 h-5" />
+              </Button>
+            </Link>
             <Button variant="outline" size="xl">
               Смотреть демо
             </Button>

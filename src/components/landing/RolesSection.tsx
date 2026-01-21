@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Building2, Truck, User, ArrowRight, CheckCircle2 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const roles = [
   {
@@ -103,10 +104,12 @@ export const RolesSection = () => {
               </ul>
 
               {/* CTA Button */}
-              <Button variant={role.variant} className="w-full">
-                Начать как {role.title}
-                <ArrowRight className="w-4 h-4" />
-              </Button>
+              <Link to="/auth">
+                <Button variant={role.variant} className="w-full">
+                  Начать как {role.title}
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
             </div>
           ))}
         </div>
