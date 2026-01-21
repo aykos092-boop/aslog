@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { 
   ArrowLeft, Package, MapPin, MessageSquare, Loader2, 
-  Truck, CheckCircle, Navigation, Flag, Star
+  Truck, CheckCircle, Navigation, Flag, Star, XCircle
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,10 +12,22 @@ import { useToast } from "@/hooks/use-toast";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
 } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ChatMessages } from "@/components/chat/ChatMessages";
 import { LiveMap } from "@/components/tracking/LiveMap";
 import { GpsTracker } from "@/components/tracking/GpsTracker";
@@ -67,6 +79,9 @@ const DealChat = () => {
   const [otherParticipantName, setOtherParticipantName] = useState<string>("");
   const [myRating, setMyRating] = useState<Rating | null>(null);
   const [otherRating, setOtherRating] = useState<Rating | null>(null);
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelling, setCancelling] = useState(false);
 
   const fetchDeal = async () => {
     if (!dealId || !user) return;
@@ -205,6 +220,56 @@ const DealChat = () => {
     });
   };
 
+  const handleCancelDeal = async () => {
+    if (!deal || !user || !cancelReason.trim()) return;
+
+    setCancelling(true);
+
+    // Update deal status to cancelled
+    const { error: dealError } = await supabase
+      .from("deals")
+      .update({ status: "cancelled" })
+      .eq("id", deal.id);
+
+    if (dealError) {
+      toast({
+        title: "Ошибка",
+        description: "Не удалось отменить сделку",
+        variant: "destructive",
+      });
+      setCancelling(false);
+      return;
+    }
+
+    // Reopen the order so other carriers can respond
+    await supabase
+      .from("orders")
+      .update({ status: "open" })
+      .eq("id", deal.order_id);
+
+    // Add system message with cancellation reason
+    const cancellerRole = isCarrier ? "Перевозчик" : "Клиент";
+    await supabase.from("messages").insert({
+      deal_id: deal.id,
+      sender_id: user.id,
+      content: `${cancellerRole} отменил сделку. Причина: ${cancelReason.trim()}`,
+      is_system: true,
+    });
+
+    setCancelling(false);
+    setCancelDialogOpen(false);
+    setCancelReason("");
+
+    toast({
+      title: "Сделка отменена",
+      description: "Заявка снова доступна для других перевозчиков",
+    });
+
+    navigate("/dashboard");
+  };
+
+  const canCancel = deal && ["pending", "accepted"].includes(deal.status);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -307,6 +372,19 @@ const DealChat = () => {
                 )}
               </div>
             )}
+
+            {/* Cancel Button - available for both parties before in_transit */}
+            {canCancel && (
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={() => setCancelDialogOpen(true)}
+                disabled={updatingStatus}
+              >
+                <XCircle className="w-4 h-4 mr-1" />
+                Отменить сделку
+              </Button>
+            )}
           </div>
 
           {/* Route */}
@@ -385,6 +463,52 @@ const DealChat = () => {
           />
         </div>
       </div>
+
+      {/* Cancel Deal Dialog */}
+      <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <XCircle className="w-5 h-5 text-destructive" />
+              Отменить сделку?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Сделка будет отменена, а заявка снова станет доступна для других перевозчиков.
+              Вторая сторона получит уведомление об отмене.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          
+          <div className="space-y-2 py-2">
+            <Label htmlFor="cancel-reason">Причина отмены *</Label>
+            <Textarea
+              id="cancel-reason"
+              placeholder="Укажите причину отмены сделки..."
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              className="resize-none"
+              rows={3}
+            />
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={cancelling}>Назад</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancelDeal}
+              disabled={cancelling || !cancelReason.trim()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {cancelling ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Отмена...
+                </>
+              ) : (
+                "Отменить сделку"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
