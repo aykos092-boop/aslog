@@ -64,6 +64,30 @@ export type Database = {
           },
         ]
       }
+      favorite_carriers: {
+        Row: {
+          carrier_id: string
+          client_id: string
+          created_at: string
+          id: string
+          note: string | null
+        }
+        Insert: {
+          carrier_id: string
+          client_id: string
+          created_at?: string
+          id?: string
+          note?: string | null
+        }
+        Update: {
+          carrier_id?: string
+          client_id?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+        }
+        Relationships: []
+      }
       gps_locations: {
         Row: {
           carrier_id: string

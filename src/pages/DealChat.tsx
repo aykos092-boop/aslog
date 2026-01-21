@@ -33,6 +33,7 @@ import { LiveMap } from "@/components/tracking/LiveMap";
 import { GpsTracker } from "@/components/tracking/GpsTracker";
 import { RatingForm } from "@/components/ratings/RatingForm";
 import { RatingDisplay } from "@/components/ratings/RatingDisplay";
+import { FavoriteCarrierButton } from "@/components/favorites/FavoriteCarrierButton";
 
 interface Deal {
   id: string;
@@ -304,12 +305,18 @@ const DealChat = () => {
                   <MessageSquare className="w-4 h-4" />
                   Чат сделки
                 </h1>
-                <Link 
-                  to={`/profile/${otherUserId}`}
-                  className="text-sm text-muted-foreground hover:text-primary underline-offset-2 hover:underline transition-colors"
-                >
-                  {otherParticipantName}
-                </Link>
+                <div className="flex items-center gap-1">
+                  <Link 
+                    to={`/profile/${otherUserId}`}
+                    className="text-sm text-muted-foreground hover:text-primary underline-offset-2 hover:underline transition-colors"
+                  >
+                    {otherParticipantName}
+                  </Link>
+                  {/* Favorite button for clients viewing carrier */}
+                  {isClient && (
+                    <FavoriteCarrierButton carrierId={deal.carrier_id} />
+                  )}
+                </div>
               </div>
             </div>
             <Badge className={`${status.color} text-white`}>

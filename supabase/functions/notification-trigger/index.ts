@@ -160,8 +160,12 @@ serve(async (req) => {
       }
     }
 
-    // Save notifications to database and send push
+    // Save notifications to database and send push + email
     let sentCount = 0;
+    let emailCount = 0;
+    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+
     for (const notif of notifications) {
       // Save to notifications table for in-app history
       await supabase.from("notifications").insert({
@@ -203,12 +207,42 @@ serve(async (req) => {
           }
         }
       }
+
+      // Send email notification for important events (responses and deal status changes)
+      if (payload.type === "response" || payload.type === "deal_status") {
+        try {
+          const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${anonKey}`,
+            },
+            body: JSON.stringify({
+              type: payload.type,
+              userId: notif.userId,
+              title: notif.title,
+              body: notif.body,
+              url: notif.url,
+            }),
+          });
+
+          if (emailResponse.ok) {
+            emailCount++;
+            console.log("Email sent successfully to user:", notif.userId);
+          } else {
+            const errorData = await emailResponse.text();
+            console.error("Email send failed:", errorData);
+          }
+        } catch (emailError) {
+          console.error("Error calling send-email function:", emailError);
+        }
+      }
     }
 
-    console.log(`Sent ${sentCount} notifications for ${payload.type} event`);
+    console.log(`Sent ${sentCount} push + ${emailCount} emails for ${payload.type} event`);
 
     return new Response(
-      JSON.stringify({ success: true, notifications: notifications.length, sent: sentCount }),
+      JSON.stringify({ success: true, notifications: notifications.length, sent: sentCount, emails: emailCount }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
