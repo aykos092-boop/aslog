@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { LogOut, User, Truck, Package, TrendingUp, Clock, Star, Loader2, Shield } from "lucide-react";
 import { ClientDashboard } from "@/components/client/ClientDashboard";
 import { CarrierDashboard } from "@/components/carrier/CarrierDashboard";
+import { NotificationToggle } from "@/components/notifications/NotificationToggle";
 import { supabase } from "@/integrations/supabase/client";
 
 const Dashboard = () => {
@@ -180,6 +181,7 @@ const Dashboard = () => {
             </Badge>
           </div>
           <div className="flex items-center gap-4">
+            <NotificationToggle />
             <Button
               variant="ghost"
               size="sm"
