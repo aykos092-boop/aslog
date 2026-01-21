@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, User, Truck, Package, TrendingUp, Clock, Star, Loader2 } from "lucide-react";
+import { LogOut, User, Truck, Package, TrendingUp, Clock, Star, Loader2, Shield } from "lucide-react";
 import { ClientDashboard } from "@/components/client/ClientDashboard";
 import { CarrierDashboard } from "@/components/carrier/CarrierDashboard";
 import { supabase } from "@/integrations/supabase/client";
@@ -149,6 +149,8 @@ const Dashboard = () => {
         return <User className="w-4 h-4" />;
       case "carrier":
         return <Truck className="w-4 h-4" />;
+      case "admin":
+        return <Shield className="w-4 h-4" />;
       default:
         return <User className="w-4 h-4" />;
     }
@@ -274,26 +276,22 @@ const Dashboard = () => {
         {isCarrier && <CarrierDashboard />}
 
         {isAdmin && (
-          <div className="grid md:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Пользователи</CardTitle>
-                <CardDescription>Управление пользователями платформы</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button variant="outline">Перейти к управлению</Button>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Сделки</CardTitle>
-                <CardDescription>Мониторинг всех активных сделок</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button variant="outline">Смотреть сделки</Button>
-              </CardContent>
-            </Card>
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="w-5 h-5" />
+                Панель администратора
+              </CardTitle>
+              <CardDescription>
+                Управление пользователями, сделками и аналитика платформы
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button onClick={() => navigate("/admin")}>
+                Открыть админ-панель
+              </Button>
+            </CardContent>
+          </Card>
         )}
       </main>
     </div>
