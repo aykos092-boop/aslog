@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { LogOut, User, Truck, Package, TrendingUp, Clock, Star, Loader2 } from "lucide-react";
 import { ClientDashboard } from "@/components/client/ClientDashboard";
+import { CarrierDashboard } from "@/components/carrier/CarrierDashboard";
 import { supabase } from "@/integrations/supabase/client";
 
 const Dashboard = () => {
@@ -270,21 +271,7 @@ const Dashboard = () => {
         {/* Role-specific content */}
         {isClient && <ClientDashboard />}
 
-        {isCarrier && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Доступные заявки</CardTitle>
-              <CardDescription>
-                Просмотрите актуальные заявки и откликнитесь на подходящие
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                Пока нет доступных заявок
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {isCarrier && <CarrierDashboard />}
 
         {isAdmin && (
           <div className="grid md:grid-cols-2 gap-4">
