@@ -9,6 +9,7 @@ import { LogOut, User, Truck, Package, TrendingUp, Clock, Star, Loader2, Shield 
 import { ClientDashboard } from "@/components/client/ClientDashboard";
 import { CarrierDashboard } from "@/components/carrier/CarrierDashboard";
 import { NotificationToggle } from "@/components/notifications/NotificationToggle";
+import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { supabase } from "@/integrations/supabase/client";
 
 const Dashboard = () => {
@@ -180,7 +181,8 @@ const Dashboard = () => {
               <span className="ml-1">{getRoleLabel()}</span>
             </Badge>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <NotificationCenter />
             <NotificationToggle />
             <Button
               variant="ghost"

@@ -160,9 +160,20 @@ serve(async (req) => {
       }
     }
 
-    // Send all notifications
+    // Save notifications to database and send push
     let sentCount = 0;
     for (const notif of notifications) {
+      // Save to notifications table for in-app history
+      await supabase.from("notifications").insert({
+        user_id: notif.userId,
+        title: notif.title,
+        body: notif.body,
+        url: notif.url,
+        type: payload.type,
+        is_read: false,
+      });
+
+      // Send push notification
       const { data: subscriptions } = await supabase
         .from("push_subscriptions")
         .select("*")
@@ -171,7 +182,6 @@ serve(async (req) => {
       if (subscriptions && subscriptions.length > 0) {
         for (const sub of subscriptions) {
           try {
-            // Send push notification
             const pushPayload = JSON.stringify({
               title: notif.title,
               body: notif.body,

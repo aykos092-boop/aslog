@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
-import { Package, MapPin, Calendar, Weight, Ruler, Send, Loader2, Eye, Search, Filter, X, CalendarIcon } from "lucide-react";
+import { Package, MapPin, Calendar, Weight, Ruler, Send, Loader2, Eye, Search, Filter, X, CalendarIcon, ArrowUpDown } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -80,6 +80,7 @@ export const AvailableOrdersList = () => {
   const [dateFrom, setDateFrom] = useState<Date | undefined>();
   const [dateTo, setDateTo] = useState<Date | undefined>();
   const [showFilters, setShowFilters] = useState(false);
+  const [sortBy, setSortBy] = useState<string>("date_desc");
 
   const fetchOrders = async () => {
     if (!user) return;
@@ -139,7 +140,7 @@ export const AvailableOrdersList = () => {
 
   // Filter orders based on search and filters
   const filteredOrders = useMemo(() => {
-    return orders.filter(order => {
+    let result = orders.filter(order => {
       // Search query filter (route + cargo type)
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -166,16 +167,39 @@ export const AvailableOrdersList = () => {
 
       return true;
     });
-  }, [orders, searchQuery, cargoTypeFilter, dateFrom, dateTo]);
+
+    // Sort orders
+    result = [...result].sort((a, b) => {
+      switch (sortBy) {
+        case "date_asc":
+          return new Date(a.pickup_date).getTime() - new Date(b.pickup_date).getTime();
+        case "date_desc":
+          return new Date(b.pickup_date).getTime() - new Date(a.pickup_date).getTime();
+        case "created_asc":
+          return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+        case "created_desc":
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        case "weight_asc":
+          return (a.weight || 0) - (b.weight || 0);
+        case "weight_desc":
+          return (b.weight || 0) - (a.weight || 0);
+        default:
+          return 0;
+      }
+    });
+
+    return result;
+  }, [orders, searchQuery, cargoTypeFilter, dateFrom, dateTo, sortBy]);
 
   const clearFilters = () => {
     setSearchQuery("");
     setCargoTypeFilter("all");
     setDateFrom(undefined);
     setDateTo(undefined);
+    setSortBy("date_desc");
   };
 
-  const hasActiveFilters = searchQuery || cargoTypeFilter !== "all" || dateFrom || dateTo;
+  const hasActiveFilters = searchQuery || cargoTypeFilter !== "all" || dateFrom || dateTo || sortBy !== "date_desc";
 
   const handleOpenResponse = (order: Order) => {
     setSelectedOrder(order);
@@ -300,7 +324,7 @@ export const AvailableOrdersList = () => {
                 </div>
               </div>
 
-              <div className="grid sm:grid-cols-3 gap-4">
+              <div className="grid sm:grid-cols-4 gap-4">
                 {/* Cargo Type Filter */}
                 <div className="space-y-2">
                   <Label>Тип груза</Label>
@@ -315,6 +339,25 @@ export const AvailableOrdersList = () => {
                           {type}
                         </SelectItem>
                       ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Sort By */}
+                <div className="space-y-2">
+                  <Label>Сортировка</Label>
+                  <Select value={sortBy} onValueChange={setSortBy}>
+                    <SelectTrigger>
+                      <ArrowUpDown className="w-4 h-4 mr-2" />
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="date_desc">Дата погрузки ↓</SelectItem>
+                      <SelectItem value="date_asc">Дата погрузки ↑</SelectItem>
+                      <SelectItem value="created_desc">Новые сначала</SelectItem>
+                      <SelectItem value="created_asc">Старые сначала</SelectItem>
+                      <SelectItem value="weight_desc">Вес ↓</SelectItem>
+                      <SelectItem value="weight_asc">Вес ↑</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
