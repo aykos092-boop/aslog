@@ -197,6 +197,10 @@ const translations: Record<Language, Record<string, string>> = {
     // Map
     "map.route": "Маршрут",
     "map.showOnMap": "Показать на карте",
+    "map.optimalRoute": "Оптимальный маршрут",
+    "map.liveTracking": "Отслеживание в реальном времени",
+    "map.driverLocation": "Местоположение водителя",
+    "map.estimatedArrival": "Расчётное время прибытия",
     
     // Languages
     "language.ru": "Русский",
@@ -533,6 +537,10 @@ const translations: Record<Language, Record<string, string>> = {
     // Map
     "map.route": "Marshrut",
     "map.showOnMap": "Xaritada ko'rsatish",
+    "map.optimalRoute": "Optimal marshrut",
+    "map.liveTracking": "Jonli kuzatish",
+    "map.driverLocation": "Haydovchi joylashuvi",
+    "map.estimatedArrival": "Taxminiy yetib kelish vaqti",
     
     // Languages
     "language.ru": "Русский",
@@ -869,6 +877,10 @@ const translations: Record<Language, Record<string, string>> = {
     // Map
     "map.route": "Route",
     "map.showOnMap": "Show on Map",
+    "map.optimalRoute": "Optimal Route",
+    "map.liveTracking": "Live Tracking",
+    "map.driverLocation": "Driver Location",
+    "map.estimatedArrival": "Estimated Arrival",
     
     // Languages
     "language.ru": "Русский",
