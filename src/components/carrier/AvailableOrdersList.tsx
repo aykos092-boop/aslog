@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
-import { Package, MapPin, Calendar, Weight, Ruler, Send, Loader2, Eye, Search, Filter, X, CalendarIcon, ArrowUpDown } from "lucide-react";
+import { Package, MapPin, Calendar, Weight, Ruler, Send, Loader2, Eye, Search, Filter, X, CalendarIcon, ArrowUpDown, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -53,6 +53,7 @@ interface Order {
   description: string | null;
   status: string;
   created_at: string;
+  photo_urls: string[] | null;
   client_profile?: {
     full_name: string | null;
   };
@@ -497,6 +498,12 @@ export const AvailableOrdersList = () => {
                         {[order.length, order.width, order.height].filter(Boolean).join(" × ")} м
                       </div>
                     )}
+                    {order.photo_urls && order.photo_urls.length > 0 && (
+                      <div className="flex items-center gap-1">
+                        <ImageIcon className="w-4 h-4" />
+                        {order.photo_urls.length} фото
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -687,6 +694,30 @@ export const AvailableOrdersList = () => {
                   <div>
                     <p className="text-sm text-muted-foreground">Описание</p>
                     <p className="font-medium">{selectedOrder.description}</p>
+                  </div>
+                )}
+
+                {/* Cargo Photos */}
+                {selectedOrder.photo_urls && selectedOrder.photo_urls.length > 0 && (
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-2">Фото груза</p>
+                    <div className="grid grid-cols-3 gap-2">
+                      {selectedOrder.photo_urls.map((url, idx) => (
+                        <a 
+                          key={idx} 
+                          href={url} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="aspect-square rounded-lg overflow-hidden border hover:opacity-80 transition-opacity"
+                        >
+                          <img 
+                            src={url} 
+                            alt={`Фото ${idx + 1}`} 
+                            className="w-full h-full object-cover"
+                          />
+                        </a>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

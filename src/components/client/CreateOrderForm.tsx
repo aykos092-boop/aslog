@@ -34,6 +34,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { CargoImageUpload } from "./CargoImageUpload";
 
 const orderSchema = z.object({
   cargo_type: z.string().min(2, "Укажите тип груза"),
@@ -55,6 +56,7 @@ interface CreateOrderFormProps {
 
 export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
   const [loading, setLoading] = useState(false);
+  const [cargoImages, setCargoImages] = useState<string[]>([]);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -88,6 +90,7 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
       delivery_address: data.delivery_address,
       pickup_date: data.pickup_date.toISOString(),
       description: data.description || null,
+      photo_urls: cargoImages.length > 0 ? cargoImages : null,
     });
 
     setLoading(false);
@@ -105,6 +108,7 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
         description: "Перевозчики уже могут откликнуться на неё",
       });
       form.reset();
+      setCargoImages([]);
       onSuccess?.();
     }
   };
@@ -271,6 +275,16 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
                 </FormItem>
               )}
             />
+
+            {/* Cargo Images */}
+            <div className="space-y-2">
+              <FormLabel>Фото груза</FormLabel>
+              <CargoImageUpload
+                images={cargoImages}
+                onImagesChange={setCargoImages}
+                maxImages={5}
+              />
+            </div>
 
             {/* Description */}
             <FormField

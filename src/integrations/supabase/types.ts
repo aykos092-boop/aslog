@@ -211,6 +211,7 @@ export type Database = {
           height: number | null
           id: string
           length: number | null
+          photo_urls: string[] | null
           pickup_address: string
           pickup_date: string
           status: Database["public"]["Enums"]["order_status"]
@@ -227,6 +228,7 @@ export type Database = {
           height?: number | null
           id?: string
           length?: number | null
+          photo_urls?: string[] | null
           pickup_address: string
           pickup_date: string
           status?: Database["public"]["Enums"]["order_status"]
@@ -243,6 +245,7 @@ export type Database = {
           height?: number | null
           id?: string
           length?: number | null
+          photo_urls?: string[] | null
           pickup_address?: string
           pickup_date?: string
           status?: Database["public"]["Enums"]["order_status"]
