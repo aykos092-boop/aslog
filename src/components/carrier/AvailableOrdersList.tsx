@@ -557,6 +557,14 @@ export const AvailableOrdersList = () => {
               {/* Order Summary */}
               <div className="p-3 rounded-lg bg-muted/50 space-y-2">
                 <p className="font-medium">{selectedOrder.cargo_type}</p>
+                {selectedOrder.client_price && (
+                  <div className="flex items-center gap-2">
+                    <Banknote className="w-4 h-4 text-primary" />
+                    <span className="font-bold text-primary">
+                      Цена клиента: {selectedOrder.client_price.toLocaleString("ru-RU")} ₽
+                    </span>
+                  </div>
+                )}
                 <div className="text-sm text-muted-foreground space-y-1">
                   <div className="flex items-center gap-2">
                     <MapPin className="w-3 h-3 text-driver" />
@@ -569,17 +577,29 @@ export const AvailableOrdersList = () => {
                 </div>
               </div>
 
-              {/* Response Form */}
+              {/* Response Form - Carrier proposes counter offer */}
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="price">Цена (₽) *</Label>
+                  <Label htmlFor="price">
+                    {selectedOrder.client_price 
+                      ? "Ваше встречное предложение (₽)" 
+                      : "Предложите цену (₽)"} *
+                  </Label>
                   <Input
                     id="price"
                     type="number"
-                    placeholder="Введите вашу цену"
+                    placeholder={selectedOrder.client_price 
+                      ? `Клиент предлагает ${selectedOrder.client_price.toLocaleString("ru-RU")} ₽`
+                      : "Введите вашу цену"
+                    }
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
                   />
+                  {selectedOrder.client_price && (
+                    <p className="text-xs text-muted-foreground">
+                      Вы можете предложить свою цену. Клиент сможет принять, отклонить или предложить встречную цену
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -596,7 +616,7 @@ export const AvailableOrdersList = () => {
                   <Label htmlFor="comment">Комментарий</Label>
                   <Textarea
                     id="comment"
-                    placeholder="Дополнительная информация о вашем предложении..."
+                    placeholder="Почему вы предлагаете такую цену, условия перевозки..."
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
                     className="resize-none"
