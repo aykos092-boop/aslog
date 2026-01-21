@@ -3,9 +3,12 @@ import { Truck, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 
 export const Header = () => {
-  const { user, role } = useAuth();
+  const { user } = useAuth();
+  const { t } = useLanguage();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
@@ -13,44 +16,47 @@ export const Header = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 gradient-hero rounded-xl flex items-center justify-center">
+          <Link to="/" className="flex items-center gap-2 group">
+            <div className="w-10 h-10 gradient-hero rounded-xl flex items-center justify-center transition-transform group-hover:scale-105">
               <Truck className="w-5 h-5 text-primary-foreground" />
             </div>
-            <span className="text-xl font-bold text-foreground">LogiFlow</span>
-          </div>
+            <span className="text-xl font-bold text-foreground">
+              Asia<span className="text-primary">Log</span>
+            </span>
+          </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
             <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-              Возможности
+              {t("landing.footer.features")}
             </a>
             <a href="#roles" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-              Для кого
+              {t("landing.roles.title")}
             </a>
             <a href="#trust" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
-              Доверие
+              {t("landing.trust.title")}
             </a>
           </nav>
 
           {/* Desktop CTA */}
           <div className="hidden md:flex items-center gap-3">
-          {user ? (
+            <LanguageSwitcher />
+            {user ? (
               <Link to="/dashboard">
                 <Button variant="hero" size="sm">
-                  Личный кабинет
+                  {t("nav.dashboard")}
                 </Button>
               </Link>
             ) : (
               <>
                 <Link to="/auth">
                   <Button variant="ghost" size="sm">
-                    Войти
+                    {t("auth.login")}
                   </Button>
                 </Link>
                 <Link to="/auth">
                   <Button variant="hero" size="sm">
-                    Начать бесплатно
+                    {t("landing.hero.cta")}
                   </Button>
                 </Link>
               </>
@@ -75,35 +81,38 @@ export const Header = () => {
           <div className="md:hidden py-4 border-t border-border animate-fade-in">
             <nav className="flex flex-col gap-4">
               <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground">
-                Возможности
+                {t("landing.footer.features")}
               </a>
               <a href="#roles" className="text-sm font-medium text-muted-foreground hover:text-foreground">
-                Для кого
+                {t("landing.roles.title")}
               </a>
               <a href="#trust" className="text-sm font-medium text-muted-foreground hover:text-foreground">
-                Доверие
+                {t("landing.trust.title")}
               </a>
+              <div className="pt-4">
+                <LanguageSwitcher />
+              </div>
               <div className="flex flex-col gap-2 pt-4">
-              {user ? (
-                <Link to="/dashboard">
-                  <Button variant="hero" size="sm" className="w-full">
-                    Личный кабинет
-                  </Button>
-                </Link>
-              ) : (
-                <>
-                  <Link to="/auth">
-                    <Button variant="outline" size="sm" className="w-full">
-                      Войти
-                    </Button>
-                  </Link>
-                  <Link to="/auth">
+                {user ? (
+                  <Link to="/dashboard">
                     <Button variant="hero" size="sm" className="w-full">
-                      Начать бесплатно
+                      {t("nav.dashboard")}
                     </Button>
                   </Link>
-                </>
-              )}
+                ) : (
+                  <>
+                    <Link to="/auth">
+                      <Button variant="outline" size="sm" className="w-full">
+                        {t("auth.login")}
+                      </Button>
+                    </Link>
+                    <Link to="/auth">
+                      <Button variant="hero" size="sm" className="w-full">
+                        {t("landing.hero.cta")}
+                      </Button>
+                    </Link>
+                  </>
+                )}
               </div>
             </nav>
           </div>

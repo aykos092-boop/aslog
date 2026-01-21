@@ -1,8 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export const CTASection = () => {
+  const { t } = useLanguage();
+
   return (
     <section className="py-24 relative overflow-hidden">
       {/* Background Gradient */}
@@ -25,43 +28,43 @@ export const CTASection = () => {
       <div className="container mx-auto px-4 relative">
         <div className="max-w-3xl mx-auto text-center">
           {/* Badge */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 text-white text-sm font-medium mb-8">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/20 text-white text-sm font-medium mb-8 animate-fade-in">
             <Sparkles className="w-4 h-4" />
-            Бесплатный старт
+            {t("landing.cta.badge")}
           </div>
 
           {/* Heading */}
-          <h2 className="text-3xl md:text-5xl font-bold text-white mb-6">
-            Готовы начать?
+          <h2 className="text-3xl md:text-5xl font-bold text-white mb-6 animate-fade-in" style={{ animationDelay: "0.1s" }}>
+            {t("landing.cta.title")}
           </h2>
 
           {/* Subheading */}
-          <p className="text-lg md:text-xl text-white/80 mb-10 max-w-xl mx-auto">
-            Присоединяйтесь к платформе LogiFlow и откройте новые возможности для вашего бизнеса
+          <p className="text-lg md:text-xl text-white/80 mb-10 max-w-xl mx-auto animate-fade-in" style={{ animationDelay: "0.2s" }}>
+            {t("landing.cta.subtitle")}
           </p>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in" style={{ animationDelay: "0.3s" }}>
             <Link to="/auth">
-              <Button variant="glass" size="xl" className="bg-white text-primary hover:bg-white/90">
-                Создать аккаунт
-                <ArrowRight className="w-5 h-5" />
+              <Button variant="glass" size="xl" className="bg-white text-primary hover:bg-white/90 group">
+                {t("landing.cta.create")}
+                <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
               </Button>
             </Link>
             <Button variant="glass" size="xl">
-              Связаться с нами
+              {t("landing.cta.contact")}
             </Button>
           </div>
 
           {/* Trust Indicators */}
-          <div className="mt-12 flex items-center justify-center gap-8 text-white/60 text-sm">
+          <div className="mt-12 flex items-center justify-center gap-8 text-white/60 text-sm animate-fade-in" style={{ animationDelay: "0.4s" }}>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-driver" />
-              Бесплатная регистрация
+              {t("landing.cta.free")}
             </div>
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-driver" />
-              Без скрытых платежей
+              {t("landing.cta.noHidden")}
             </div>
           </div>
         </div>

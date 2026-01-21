@@ -160,7 +160,7 @@ const Dashboard = () => {
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <h1 className="text-xl font-bold">LogiFlow</h1>
+            <h1 className="text-xl font-bold">Asia<span className="text-primary">Log</span></h1>
             <Badge variant="outline" className={`bg-${role}-light`}>
               {getRoleIcon()}
               <span className="ml-1">{getRoleLabel()}</span>
