@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
-import { ru } from "date-fns/locale";
-import { CalendarIcon, Package, MapPin, Loader2, Tag, Check, X } from "lucide-react";
+import { ru, enUS } from "date-fns/locale";
+import { CalendarIcon, Package, MapPin, Loader2, Tag, Check, X, Truck } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,13 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -37,20 +45,53 @@ import {
 } from "@/components/ui/card";
 import { CargoImageUpload } from "./CargoImageUpload";
 
-const orderSchema = z.object({
-  cargo_type: z.string().min(2, "Укажите тип груза"),
-  weight: z.string().optional(),
-  length: z.string().optional(),
-  width: z.string().optional(),
-  height: z.string().optional(),
-  pickup_address: z.string().min(5, "Укажите адрес погрузки"),
-  delivery_address: z.string().min(5, "Укажите адрес выгрузки"),
-  pickup_date: z.date({ required_error: "Выберите дату" }),
-  description: z.string().optional(),
-  client_price: z.string().optional(),
-});
-
-type OrderFormValues = z.infer<typeof orderSchema>;
+// Central Asia regions and cities
+const centralAsiaData = {
+  uzbekistan: {
+    nameKey: "region.uzbekistan",
+    cities: [
+      "Toshkent", "Samarqand", "Buxoro", "Andijon", "Namangan", 
+      "Farg'ona", "Qarshi", "Nukus", "Urganch", "Jizzax",
+      "Termiz", "Navoiy", "Guliston", "Chirchiq", "Olmaliq"
+    ]
+  },
+  kazakhstan: {
+    nameKey: "region.kazakhstan",
+    cities: [
+      "Almaty", "Nur-Sultan", "Shymkent", "Aktobe", "Karaganda",
+      "Taraz", "Pavlodar", "Ust-Kamenogorsk", "Semey", "Atyrau",
+      "Kostanay", "Kyzylorda", "Aktau", "Turkestan", "Petropavlovsk"
+    ]
+  },
+  kyrgyzstan: {
+    nameKey: "region.kyrgyzstan",
+    cities: [
+      "Bishkek", "Osh", "Jalal-Abad", "Karakol", "Tokmok",
+      "Naryn", "Batken", "Talas", "Isfana", "Kara-Balta"
+    ]
+  },
+  tajikistan: {
+    nameKey: "region.tajikistan",
+    cities: [
+      "Dushanbe", "Khujand", "Kulob", "Qurghonteppa", "Istaravshan",
+      "Vahdat", "Konibodom", "Tursunzoda", "Isfara", "Panjakent"
+    ]
+  },
+  turkmenistan: {
+    nameKey: "region.turkmenistan",
+    cities: [
+      "Ashgabat", "Türkmenabat", "Daşoguz", "Mary", "Balkanabat",
+      "Bayramaly", "Türkmenbaşy", "Tejen", "Serdar", "Atamyrat"
+    ]
+  },
+  afghanistan: {
+    nameKey: "region.afghanistan",
+    cities: [
+      "Kabul", "Herat", "Mazar-i-Sharif", "Kandahar", "Jalalabad",
+      "Kunduz", "Balkh", "Ghazni", "Baghlan", "Khost"
+    ]
+  }
+};
 
 interface PromoCode {
   id: string;
@@ -66,14 +107,37 @@ interface CreateOrderFormProps {
 }
 
 export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
+  const { t, language } = useLanguage();
+  const { user } = useAuth();
+  const { toast } = useToast();
+  
   const [loading, setLoading] = useState(false);
   const [cargoImages, setCargoImages] = useState<string[]>([]);
   const [promoCode, setPromoCode] = useState("");
   const [appliedPromo, setAppliedPromo] = useState<PromoCode | null>(null);
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoError, setPromoError] = useState("");
-  const { user } = useAuth();
-  const { toast } = useToast();
+  
+  // Region/City selection state
+  const [pickupRegion, setPickupRegion] = useState("");
+  const [pickupCity, setPickupCity] = useState("");
+  const [deliveryRegion, setDeliveryRegion] = useState("");
+  const [deliveryCity, setDeliveryCity] = useState("");
+
+  const orderSchema = useMemo(() => z.object({
+    cargo_type: z.string().min(2, t("orders.cargoType")),
+    weight: z.string().optional(),
+    length: z.string().optional(),
+    width: z.string().optional(),
+    height: z.string().optional(),
+    pickup_address: z.string().min(3, t("orders.pickupAddress")),
+    delivery_address: z.string().min(3, t("orders.deliveryAddress")),
+    pickup_date: z.date({ required_error: t("orders.pickupDate") }),
+    description: z.string().optional(),
+    client_price: z.string().optional(),
+  }), [t]);
+
+  type OrderFormValues = z.infer<typeof orderSchema>;
 
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(orderSchema),
@@ -89,6 +153,42 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
       client_price: "",
     },
   });
+
+  // Get cities for selected region
+  const pickupCities = pickupRegion 
+    ? centralAsiaData[pickupRegion as keyof typeof centralAsiaData]?.cities || []
+    : [];
+  const deliveryCities = deliveryRegion 
+    ? centralAsiaData[deliveryRegion as keyof typeof centralAsiaData]?.cities || []
+    : [];
+
+  // Update address when city changes
+  const updatePickupAddress = (city: string) => {
+    setPickupCity(city);
+    if (pickupRegion && city) {
+      const regionName = t(centralAsiaData[pickupRegion as keyof typeof centralAsiaData].nameKey);
+      form.setValue("pickup_address", `${city}, ${regionName}`);
+    }
+  };
+
+  const updateDeliveryAddress = (city: string) => {
+    setDeliveryCity(city);
+    if (deliveryRegion && city) {
+      const regionName = t(centralAsiaData[deliveryRegion as keyof typeof centralAsiaData].nameKey);
+      form.setValue("delivery_address", `${city}, ${regionName}`);
+    }
+  };
+
+  const getDateLocale = () => {
+    switch (language) {
+      case "en": return enUS;
+      default: return ru;
+    }
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('uz-UZ').format(value) + " " + t("common.currency");
+  };
 
   const applyPromoCode = async () => {
     if (!promoCode.trim()) return;
@@ -106,24 +206,21 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
     setPromoLoading(false);
 
     if (error || !data) {
-      setPromoError("Промокод не найден или недействителен");
+      setPromoError(t("promo.invalid"));
       return;
     }
 
-    // Check if max uses reached
     if (data.max_uses && data.current_uses >= data.max_uses) {
-      setPromoError("Промокод исчерпан");
+      setPromoError(t("promo.expired"));
       return;
     }
 
-    // Check min weight requirement
     const weight = parseFloat(form.getValues("weight") || "0");
     if (data.min_order_weight && weight < data.min_order_weight) {
-      setPromoError(`Минимальный вес груза: ${data.min_order_weight} кг`);
+      setPromoError(`${t("orders.weight")}: ${data.min_order_weight} ${t("common.kg")}`);
       return;
     }
 
-    // Check if already used by this user
     const { data: usageData } = await supabase
       .from("promo_usages")
       .select("id")
@@ -132,15 +229,15 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
       .single();
 
     if (usageData) {
-      setPromoError("Вы уже использовали этот промокод");
+      setPromoError(t("promo.alreadyUsed"));
       return;
     }
 
     setAppliedPromo(data);
     setPromoCode("");
     toast({
-      title: "Промокод применён!",
-      description: data.description || "Скидка будет применена к заказу",
+      title: t("promo.applied"),
+      description: data.description || "",
     });
   };
 
@@ -155,7 +252,7 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
       return `−${appliedPromo.discount_percent}%`;
     }
     if (appliedPromo.discount_amount) {
-      return `−${appliedPromo.discount_amount.toLocaleString("ru-RU")} ₽`;
+      return `−${formatCurrency(appliedPromo.discount_amount)}`;
     }
     return null;
   };
@@ -180,7 +277,6 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
       client_price: data.client_price ? parseFloat(data.client_price) : null,
     }).select().single();
 
-    // Notify carriers about new order via edge function
     if (orderData) {
       supabase.functions.invoke("notify-new-order", {
         body: { orderId: orderData.id },
@@ -190,15 +286,13 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
     if (error) {
       setLoading(false);
       toast({
-        title: "Ошибка",
-        description: "Не удалось создать заявку",
+        title: t("common.cancel"),
+        description: error.message,
         variant: "destructive",
       });
-      console.error("Order creation error:", error);
       return;
     }
 
-    // Record promo usage if applied
     if (appliedPromo && orderData) {
       const discountApplied = appliedPromo.discount_percent 
         ? appliedPromo.discount_percent 
@@ -211,7 +305,6 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
         discount_applied: discountApplied,
       });
 
-      // Increment usage count
       await supabase
         .from("promo_codes")
         .update({ current_uses: (appliedPromo as any).current_uses + 1 })
@@ -220,26 +313,28 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
 
     setLoading(false);
     toast({
-      title: "Заявка создана!",
-      description: appliedPromo 
-        ? `Промокод ${appliedPromo.code} применён к заказу`
-        : "Перевозчики уже могут откликнуться на неё",
+      title: t("orders.create") + "!",
+      description: appliedPromo ? t("promo.applied") : "",
     });
     form.reset();
     setCargoImages([]);
     setAppliedPromo(null);
+    setPickupRegion("");
+    setPickupCity("");
+    setDeliveryRegion("");
+    setDeliveryCity("");
     onSuccess?.();
   };
 
   return (
-    <Card>
+    <Card className="animate-fade-in">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Package className="w-5 h-5" />
-          Новая заявка
+          {t("orders.newOrder")}
         </CardTitle>
         <CardDescription>
-          Заполните информацию о грузе и маршруте
+          {t("orders.fillInfo")}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -251,9 +346,9 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
               name="cargo_type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Тип груза *</FormLabel>
+                  <FormLabel>{t("orders.cargoType")} *</FormLabel>
                   <FormControl>
-                    <Input placeholder="Например: Мебель, Техника, Стройматериалы" {...field} />
+                    <Input placeholder={t("orders.cargoType")} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -261,13 +356,13 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
             />
 
             {/* Dimensions Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <FormField
                 control={form.control}
                 name="weight"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Вес (кг)</FormLabel>
+                    <FormLabel>{t("orders.weight")} ({t("common.kg")})</FormLabel>
                     <FormControl>
                       <Input type="number" placeholder="0" {...field} />
                     </FormControl>
@@ -280,7 +375,7 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
                 name="length"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Длина (м)</FormLabel>
+                    <FormLabel>{t("orders.dimensions")} (м)</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.1" placeholder="0" {...field} />
                     </FormControl>
@@ -293,7 +388,7 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
                 name="width"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Ширина (м)</FormLabel>
+                    <FormLabel className="opacity-0 hidden md:block">W</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.1" placeholder="0" {...field} />
                     </FormControl>
@@ -306,7 +401,7 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
                 name="height"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Высота (м)</FormLabel>
+                    <FormLabel className="opacity-0 hidden md:block">H</FormLabel>
                     <FormControl>
                       <Input type="number" step="0.1" placeholder="0" {...field} />
                     </FormControl>
@@ -316,35 +411,115 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
               />
             </div>
 
-            {/* Addresses */}
-            <div className="grid md:grid-cols-2 gap-4">
+            {/* Pickup Location */}
+            <div className="space-y-4 p-4 rounded-xl bg-driver/5 border border-driver/20">
+              <div className="flex items-center gap-2 text-driver font-medium">
+                <MapPin className="w-4 h-4" />
+                {t("orders.pickupAddress")} *
+              </div>
+              <div className="grid md:grid-cols-2 gap-3">
+                <Select value={pickupRegion} onValueChange={(val) => {
+                  setPickupRegion(val);
+                  setPickupCity("");
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("orders.selectRegion")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(centralAsiaData).map(([key, data]) => (
+                      <SelectItem key={key} value={key}>
+                        {t(data.nameKey)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Select 
+                  value={pickupCity} 
+                  onValueChange={updatePickupAddress}
+                  disabled={!pickupRegion}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("orders.selectCity")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pickupCities.map((city) => (
+                      <SelectItem key={city} value={city}>
+                        {city}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <FormField
                 control={form.control}
                 name="pickup_address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-driver" />
-                      Адрес погрузки *
-                    </FormLabel>
                     <FormControl>
-                      <Input placeholder="г. Москва, ул. Примерная, д. 1" {...field} />
+                      <Input 
+                        placeholder={t("orders.pickupAddress")} 
+                        {...field}
+                        className="bg-background"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+            </div>
+
+            {/* Delivery Location */}
+            <div className="space-y-4 p-4 rounded-xl bg-customer/5 border border-customer/20">
+              <div className="flex items-center gap-2 text-customer font-medium">
+                <MapPin className="w-4 h-4" />
+                {t("orders.deliveryAddress")} *
+              </div>
+              <div className="grid md:grid-cols-2 gap-3">
+                <Select value={deliveryRegion} onValueChange={(val) => {
+                  setDeliveryRegion(val);
+                  setDeliveryCity("");
+                }}>
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("orders.selectRegion")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(centralAsiaData).map(([key, data]) => (
+                      <SelectItem key={key} value={key}>
+                        {t(data.nameKey)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                
+                <Select 
+                  value={deliveryCity} 
+                  onValueChange={updateDeliveryAddress}
+                  disabled={!deliveryRegion}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("orders.selectCity")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {deliveryCities.map((city) => (
+                      <SelectItem key={city} value={city}>
+                        {city}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <FormField
                 control={form.control}
                 name="delivery_address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-customer" />
-                      Адрес выгрузки *
-                    </FormLabel>
                     <FormControl>
-                      <Input placeholder="г. Санкт-Петербург, пр. Невский, д. 10" {...field} />
+                      <Input 
+                        placeholder={t("orders.deliveryAddress")} 
+                        {...field}
+                        className="bg-background"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -359,7 +534,7 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
                 name="pickup_date"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                    <FormLabel>Дата погрузки *</FormLabel>
+                    <FormLabel>{t("orders.pickupDate")} *</FormLabel>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
@@ -371,9 +546,9 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
                             )}
                           >
                             {field.value ? (
-                              format(field.value, "PPP", { locale: ru })
+                              format(field.value, "PPP", { locale: getDateLocale() })
                             ) : (
-                              <span>Выберите дату</span>
+                              <span>{t("orders.pickupDate")}</span>
                             )}
                             <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                           </Button>
@@ -386,7 +561,7 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
                           onSelect={field.onChange}
                           disabled={(date) => date < new Date()}
                           initialFocus
-                          className={cn("p-3 pointer-events-auto")}
+                          className="p-3 pointer-events-auto"
                         />
                       </PopoverContent>
                     </Popover>
@@ -400,16 +575,16 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
                 name="client_price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Ваша цена (₽)</FormLabel>
+                    <FormLabel>{t("orders.clientPrice")} ({t("common.currency")})</FormLabel>
                     <FormControl>
                       <Input 
                         type="number" 
-                        placeholder="Укажите желаемую цену" 
+                        placeholder="1 000 000" 
                         {...field} 
                       />
                     </FormControl>
                     <p className="text-xs text-muted-foreground">
-                      Необязательно. Перевозчики увидят вашу цену
+                      {t("orders.priceHint")}
                     </p>
                     <FormMessage />
                   </FormItem>
@@ -419,7 +594,7 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
 
             {/* Cargo Images */}
             <div className="space-y-2">
-              <FormLabel>Фото груза</FormLabel>
+              <FormLabel>{t("orders.cargoPhoto")}</FormLabel>
               <CargoImageUpload
                 images={cargoImages}
                 onImagesChange={setCargoImages}
@@ -431,11 +606,11 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
             <div className="space-y-2">
               <FormLabel className="flex items-center gap-2">
                 <Tag className="w-4 h-4" />
-                Промокод
+                {t("promo.title")}
               </FormLabel>
               
               {appliedPromo ? (
-                <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg border border-primary/20">
+                <div className="flex items-center gap-2 p-3 bg-primary/10 rounded-lg border border-primary/20 animate-scale-in">
                   <Check className="w-5 h-5 text-primary" />
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
@@ -463,7 +638,7 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
               ) : (
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Введите промокод"
+                    placeholder={t("promo.title")}
                     value={promoCode}
                     onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
                     className="flex-1"
@@ -477,14 +652,14 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
                     {promoLoading ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
-                      "Применить"
+                      t("promo.apply")
                     )}
                   </Button>
                 </div>
               )}
               
               {promoError && (
-                <p className="text-sm text-destructive">{promoError}</p>
+                <p className="text-sm text-destructive animate-fade-in">{promoError}</p>
               )}
             </div>
 
@@ -494,12 +669,12 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Комментарий</FormLabel>
+                  <FormLabel>{t("orders.comment")}</FormLabel>
                   <FormControl>
                     <Textarea 
-                      placeholder="Дополнительная информация о грузе, требования к перевозке..."
+                      placeholder={t("orders.description")}
                       className="resize-none"
-                      {...field} 
+                      {...field}
                     />
                   </FormControl>
                   <FormMessage />
@@ -507,23 +682,20 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
               )}
             />
 
-            {/* Submit */}
-            <Button
-              type="submit"
-              variant="customer"
-              size="lg"
+            <Button 
+              type="submit" 
+              className="w-full h-12 text-base font-medium transition-all hover:scale-[1.02]" 
               disabled={loading}
-              className="w-full md:w-auto"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Создание...
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  {t("common.loading")}
                 </>
               ) : (
                 <>
-                  <Package className="w-4 h-4 mr-2" />
-                  Создать заявку
+                  <Truck className="w-5 h-5 mr-2" />
+                  {t("orders.create")}
                 </>
               )}
             </Button>
