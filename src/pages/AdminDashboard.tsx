@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   Users, Truck, Package, TrendingUp, ArrowLeft, 
-  Shield, Loader2 
+  Shield, Loader2, Tag, Bot 
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UsersTable } from "@/components/admin/UsersTable";
 import { DealsTable } from "@/components/admin/DealsTable";
 import { AnalyticsCharts } from "@/components/admin/AnalyticsCharts";
+import { PromoCodesManager } from "@/components/admin/PromoCodesManager";
+import { AIChatAnalytics } from "@/components/admin/AIChatAnalytics";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -53,18 +55,26 @@ const AdminDashboard = () => {
       {/* Content */}
       <main className="container mx-auto px-4 py-6">
         <Tabs defaultValue="analytics" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
+          <TabsList className="grid w-full max-w-2xl grid-cols-5">
             <TabsTrigger value="analytics" className="flex items-center gap-2">
               <TrendingUp className="w-4 h-4" />
-              Аналитика
+              <span className="hidden sm:inline">Аналитика</span>
             </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="w-4 h-4" />
-              Пользователи
+              <span className="hidden sm:inline">Пользователи</span>
             </TabsTrigger>
             <TabsTrigger value="deals" className="flex items-center gap-2">
               <Truck className="w-4 h-4" />
-              Сделки
+              <span className="hidden sm:inline">Сделки</span>
+            </TabsTrigger>
+            <TabsTrigger value="promos" className="flex items-center gap-2">
+              <Tag className="w-4 h-4" />
+              <span className="hidden sm:inline">Промокоды</span>
+            </TabsTrigger>
+            <TabsTrigger value="ai" className="flex items-center gap-2">
+              <Bot className="w-4 h-4" />
+              <span className="hidden sm:inline">AI Чат</span>
             </TabsTrigger>
           </TabsList>
 
@@ -78,6 +88,14 @@ const AdminDashboard = () => {
 
           <TabsContent value="deals">
             <DealsTable />
+          </TabsContent>
+
+          <TabsContent value="promos">
+            <PromoCodesManager />
+          </TabsContent>
+
+          <TabsContent value="ai">
+            <AIChatAnalytics />
           </TabsContent>
         </Tabs>
       </main>
