@@ -8,6 +8,8 @@ import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import OrderResponses from "./pages/OrderResponses";
+import OrderChat from "./pages/OrderChat";
+import DealChat from "./pages/DealChat";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +26,8 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/orders/:orderId/responses" element={<OrderResponses />} />
+            <Route path="/orders/:orderId/chat/:carrierId" element={<OrderChat />} />
+            <Route path="/deals/:dealId/chat" element={<DealChat />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
