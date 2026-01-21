@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
 import { ru, enUS } from "date-fns/locale";
-import { CalendarIcon, Package, MapPin, Loader2, Tag, Check, X, Truck } from "lucide-react";
+import { CalendarIcon, Package, MapPin, Loader2, Tag, Check, X, Truck, Route } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -43,7 +43,13 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { CargoImageUpload } from "./CargoImageUpload";
+import { OrderRouteMap } from "@/components/map/OrderRouteMap";
 
 // Central Asia regions and cities
 const centralAsiaData = {
@@ -117,13 +123,13 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
   const [appliedPromo, setAppliedPromo] = useState<PromoCode | null>(null);
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoError, setPromoError] = useState("");
+  const [showRouteMap, setShowRouteMap] = useState(false);
   
   // Region/City selection state
   const [pickupRegion, setPickupRegion] = useState("");
   const [pickupCity, setPickupCity] = useState("");
   const [deliveryRegion, setDeliveryRegion] = useState("");
   const [deliveryCity, setDeliveryCity] = useState("");
-
   const orderSchema = useMemo(() => z.object({
     cargo_type: z.string().min(2, t("orders.cargoType")),
     weight: z.string().optional(),
@@ -526,6 +532,32 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
                 )}
               />
             </div>
+
+            {/* Route Map */}
+            {pickupCity && deliveryCity && pickupCity !== deliveryCity && (
+              <Collapsible open={showRouteMap} onOpenChange={setShowRouteMap}>
+                <CollapsibleTrigger asChild>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="w-full h-12 gap-2 apple-button glass-morphism border-primary/20 hover:border-primary/40"
+                  >
+                    <Route className="w-5 h-5 text-primary" />
+                    <span className="font-medium">{t("map.showOnMap")}</span>
+                    <Badge variant="secondary" className="ml-2">
+                      {t("map.optimalRoute")}
+                    </Badge>
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="mt-4 spring-bounce">
+                  <OrderRouteMap 
+                    pickupCity={pickupCity} 
+                    deliveryCity={deliveryCity}
+                    className="shadow-xl"
+                  />
+                </CollapsibleContent>
+              </Collapsible>
+            )}
 
             {/* Date Picker and Price */}
             <div className="grid md:grid-cols-2 gap-4">
