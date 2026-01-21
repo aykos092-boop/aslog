@@ -4,13 +4,13 @@ import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import {
   ArrowLeft, User, Truck, Star, Package, Shield,
-  CheckCircle, Clock, TrendingUp, Award, Loader2, Quote
+  CheckCircle, Clock, TrendingUp, Award, Loader2, Quote, Pencil
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Card,
   CardContent,
@@ -19,6 +19,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { ProfileEditForm } from "@/components/profile/ProfileEditForm";
 
 interface Profile {
   id: string;
@@ -28,6 +29,7 @@ interface Profile {
   company_name: string | null;
   carrier_type: string | null;
   vehicle_type: string | null;
+  avatar_url: string | null;
   is_verified: boolean;
   created_at: string;
 }
@@ -69,14 +71,14 @@ const UserProfile = () => {
   const [ratings, setRatings] = useState<Rating[]>([]);
   const [stats, setStats] = useState<Stats>({ totalDeals: 0, completedDeals: 0, activeDeals: 0, totalOrders: 0 });
   const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
 
   const targetUserId = userId || user?.id;
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!targetUserId) return;
+  const fetchProfile = async () => {
+    if (!targetUserId) return;
 
-      setLoading(true);
+    setLoading(true);
 
       // Fetch profile
       const { data: profileData } = await supabase
@@ -157,11 +159,17 @@ const UserProfile = () => {
         });
       }
 
-      setLoading(false);
-    };
+    setLoading(false);
+  };
 
+  useEffect(() => {
     fetchProfile();
   }, [targetUserId]);
+
+  const handleEditComplete = () => {
+    setIsEditing(false);
+    fetchProfile();
+  };
 
   if (loading) {
     return (
@@ -204,24 +212,42 @@ const UserProfile = () => {
       {/* Header */}
       <header className="border-b bg-card">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-            <h1 className="text-xl font-bold">
-              {isOwnProfile ? "Мой профиль" : "Профиль пользователя"}
-            </h1>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+              <h1 className="text-xl font-bold">
+                {isOwnProfile ? "Мой профиль" : "Профиль пользователя"}
+              </h1>
+            </div>
+            {isOwnProfile && !isEditing && (
+              <Button variant="outline" onClick={() => setIsEditing(true)}>
+                <Pencil className="w-4 h-4 mr-2" />
+                Редактировать
+              </Button>
+            )}
           </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-6 space-y-6">
-        {/* Profile Card */}
-        <Card>
+        {/* Edit Form */}
+        {isEditing && isOwnProfile ? (
+          <ProfileEditForm
+            profile={profile}
+            isCarrier={role === "carrier"}
+            onUpdate={handleEditComplete}
+            onCancel={() => setIsEditing(false)}
+          />
+        ) : (
+          /* Profile Card */
+          <Card>
           <CardContent className="pt-6">
             <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
               {/* Avatar */}
               <Avatar className="w-24 h-24">
+                <AvatarImage src={profile.avatar_url || undefined} />
                 <AvatarFallback className={`text-2xl ${currentRole?.color || "bg-muted"}`}>
                   {profile.full_name?.charAt(0) || "?"}
                 </AvatarFallback>
@@ -287,6 +313,7 @@ const UserProfile = () => {
             </div>
           </CardContent>
         </Card>
+        )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
