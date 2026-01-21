@@ -65,6 +65,42 @@ export type Database = {
         }
         Relationships: []
       }
+      carrier_preferences: {
+        Row: {
+          carrier_id: string
+          created_at: string
+          id: string
+          max_weight: number | null
+          min_weight: number | null
+          notify_all: boolean | null
+          preferred_cargo_types: string[] | null
+          preferred_routes: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          carrier_id: string
+          created_at?: string
+          id?: string
+          max_weight?: number | null
+          min_weight?: number | null
+          notify_all?: boolean | null
+          preferred_cargo_types?: string[] | null
+          preferred_routes?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          carrier_id?: string
+          created_at?: string
+          id?: string
+          max_weight?: number | null
+          min_weight?: number | null
+          notify_all?: boolean | null
+          preferred_cargo_types?: string[] | null
+          preferred_routes?: string[] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       deals: {
         Row: {
           agreed_price: number
@@ -398,6 +434,54 @@ export type Database = {
           width?: number | null
         }
         Relationships: []
+      }
+      price_negotiations: {
+        Row: {
+          created_at: string
+          id: string
+          message: string | null
+          order_id: string
+          proposed_by: string
+          proposed_price: number
+          response_id: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          order_id: string
+          proposed_by: string
+          proposed_price: number
+          response_id?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string | null
+          order_id?: string
+          proposed_by?: string
+          proposed_price?: number
+          response_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_negotiations_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_negotiations_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "responses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
