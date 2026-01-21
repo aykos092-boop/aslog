@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ChatMessages } from "@/components/chat/ChatMessages";
 import { LiveMap } from "@/components/tracking/LiveMap";
+import { DriverMapView } from "@/components/tracking/DriverMapView";
 import { GpsTracker } from "@/components/tracking/GpsTracker";
 import { RatingForm } from "@/components/ratings/RatingForm";
 import { RatingDisplay } from "@/components/ratings/RatingDisplay";
@@ -405,39 +406,51 @@ const DealChat = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:flex-row min-h-0">
-        {/* Side Panel: GPS, Rating, or Negotiation */}
-        <div className="lg:w-80 shrink-0 border-b lg:border-b-0 lg:border-r p-4 bg-muted/20 space-y-4 overflow-y-auto">
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden">
+        {/* Side Panel: GPS/Map, Rating, or Negotiation */}
+        <div className={`shrink-0 border-b lg:border-b-0 lg:border-r bg-muted/20 overflow-hidden flex flex-col ${
+          showGpsTracking && isCarrier ? "lg:w-[420px] h-[500px] lg:h-auto" : "lg:w-80"
+        }`}>
           {/* Price Negotiation - show for pending/accepted deals */}
           {["pending", "accepted"].includes(deal.status) && (
-            <PriceNegotiation
-              orderId={deal.order_id}
-              clientId={deal.client_id}
-              carrierId={deal.carrier_id}
-              currentPrice={deal.agreed_price}
-              clientPrice={deal.order?.client_price}
-              onPriceAgreed={(newPrice) => {
-                setDeal(prev => prev ? { ...prev, agreed_price: newPrice } : null);
-                toast({
-                  title: "Цена обновлена",
-                  description: `Новая согласованная цена: ${newPrice.toLocaleString("ru-RU")} ₽`,
-                });
-              }}
-            />
+            <div className="p-4 shrink-0">
+              <PriceNegotiation
+                orderId={deal.order_id}
+                clientId={deal.client_id}
+                carrierId={deal.carrier_id}
+                currentPrice={deal.agreed_price}
+                clientPrice={deal.order?.client_price}
+                onPriceAgreed={(newPrice) => {
+                  setDeal(prev => prev ? { ...prev, agreed_price: newPrice } : null);
+                  toast({
+                    title: "Цена обновлена",
+                    description: `Новая согласованная цена: ${newPrice.toLocaleString("ru-RU")} ₽`,
+                  });
+                }}
+              />
+            </div>
           )}
 
-          {/* GPS Tracking */}
+          {/* GPS Tracking - Driver sees DriverMapView with navigation */}
           {showGpsTracking && (
             isCarrier ? (
-              <GpsTracker dealId={dealId!} />
+              <div className="flex-1 min-h-0">
+                <DriverMapView 
+                  dealId={dealId!}
+                  pickupAddress={deal.order?.pickup_address}
+                  deliveryAddress={deal.order?.delivery_address}
+                />
+              </div>
             ) : (
-              <LiveMap dealId={dealId!} carrierName={otherParticipantName} />
+              <div className="p-4">
+                <LiveMap dealId={dealId!} carrierName={otherParticipantName} />
+              </div>
             )
           )}
 
           {/* Rating Section */}
           {showRating && (
-            <>
+            <div className="p-4 space-y-4 overflow-y-auto">
               {myRating ? (
                 <RatingDisplay 
                   rating={myRating} 
@@ -475,12 +488,12 @@ const DealChat = () => {
                   </CardContent>
                 </Card>
               )}
-            </>
+            </div>
           )}
         </div>
 
         {/* Chat */}
-        <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
           <ChatMessages
             contextType="deal"
             contextId={dealId!}
