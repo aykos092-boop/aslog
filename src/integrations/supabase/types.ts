@@ -14,16 +14,356 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      deals: {
+        Row: {
+          agreed_price: number
+          carrier_id: string
+          client_id: string
+          completed_at: string | null
+          created_at: string
+          id: string
+          order_id: string
+          proof_photo_url: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["deal_status"]
+          updated_at: string
+        }
+        Insert: {
+          agreed_price: number
+          carrier_id: string
+          client_id: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          order_id: string
+          proof_photo_url?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["deal_status"]
+          updated_at?: string
+        }
+        Update: {
+          agreed_price?: number
+          carrier_id?: string
+          client_id?: string
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          order_id?: string
+          proof_photo_url?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["deal_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "deals_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gps_locations: {
+        Row: {
+          carrier_id: string
+          deal_id: string
+          id: string
+          latitude: number
+          longitude: number
+          recorded_at: string
+        }
+        Insert: {
+          carrier_id: string
+          deal_id: string
+          id?: string
+          latitude: number
+          longitude: number
+          recorded_at?: string
+        }
+        Update: {
+          carrier_id?: string
+          deal_id?: string
+          id?: string
+          latitude?: number
+          longitude?: number
+          recorded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gps_locations_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      messages: {
+        Row: {
+          content: string
+          created_at: string
+          deal_id: string | null
+          id: string
+          is_system: boolean | null
+          order_id: string | null
+          sender_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          deal_id?: string | null
+          id?: string
+          is_system?: boolean | null
+          order_id?: string | null
+          sender_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          deal_id?: string | null
+          id?: string
+          is_system?: boolean | null
+          order_id?: string | null
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          cargo_type: string
+          client_id: string
+          created_at: string
+          delivery_address: string
+          description: string | null
+          height: number | null
+          id: string
+          length: number | null
+          pickup_address: string
+          pickup_date: string
+          status: Database["public"]["Enums"]["order_status"]
+          updated_at: string
+          weight: number | null
+          width: number | null
+        }
+        Insert: {
+          cargo_type: string
+          client_id: string
+          created_at?: string
+          delivery_address: string
+          description?: string | null
+          height?: number | null
+          id?: string
+          length?: number | null
+          pickup_address: string
+          pickup_date: string
+          status?: Database["public"]["Enums"]["order_status"]
+          updated_at?: string
+          weight?: number | null
+          width?: number | null
+        }
+        Update: {
+          cargo_type?: string
+          client_id?: string
+          created_at?: string
+          delivery_address?: string
+          description?: string | null
+          height?: number | null
+          id?: string
+          length?: number | null
+          pickup_address?: string
+          pickup_date?: string
+          status?: Database["public"]["Enums"]["order_status"]
+          updated_at?: string
+          weight?: number | null
+          width?: number | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          carrier_type: Database["public"]["Enums"]["carrier_type"] | null
+          company_name: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          is_verified: boolean | null
+          phone: string | null
+          updated_at: string
+          user_id: string
+          vehicle_type: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          carrier_type?: Database["public"]["Enums"]["carrier_type"] | null
+          company_name?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          is_verified?: boolean | null
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+          vehicle_type?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          carrier_type?: Database["public"]["Enums"]["carrier_type"] | null
+          company_name?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          is_verified?: boolean | null
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+          vehicle_type?: string | null
+        }
+        Relationships: []
+      }
+      ratings: {
+        Row: {
+          comment: string | null
+          created_at: string
+          deal_id: string
+          id: string
+          rated_id: string
+          rater_id: string
+          score: number
+        }
+        Insert: {
+          comment?: string | null
+          created_at?: string
+          deal_id: string
+          id?: string
+          rated_id: string
+          rater_id: string
+          score: number
+        }
+        Update: {
+          comment?: string | null
+          created_at?: string
+          deal_id?: string
+          id?: string
+          rated_id?: string
+          rater_id?: string
+          score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ratings_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      responses: {
+        Row: {
+          carrier_id: string
+          comment: string | null
+          created_at: string
+          delivery_time: string | null
+          id: string
+          is_accepted: boolean | null
+          order_id: string
+          price: number
+        }
+        Insert: {
+          carrier_id: string
+          comment?: string | null
+          created_at?: string
+          delivery_time?: string | null
+          id?: string
+          is_accepted?: boolean | null
+          order_id: string
+          price: number
+        }
+        Update: {
+          carrier_id?: string
+          comment?: string | null
+          created_at?: string
+          delivery_time?: string | null
+          id?: string
+          is_accepted?: boolean | null
+          order_id?: string
+          price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "responses_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "client" | "carrier" | "admin"
+      carrier_type: "driver" | "company"
+      deal_status:
+        | "pending"
+        | "accepted"
+        | "in_transit"
+        | "delivered"
+        | "cancelled"
+      order_status: "open" | "in_progress" | "completed" | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +490,17 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["client", "carrier", "admin"],
+      carrier_type: ["driver", "company"],
+      deal_status: [
+        "pending",
+        "accepted",
+        "in_transit",
+        "delivered",
+        "cancelled",
+      ],
+      order_status: ["open", "in_progress", "completed", "cancelled"],
+    },
   },
 } as const
