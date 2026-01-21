@@ -105,11 +105,11 @@ export const CarrierStats = () => {
     : 0;
 
   const getRatingLevel = (rating: number | null) => {
-    if (!rating) return { label: "Нет отзывов", color: "text-muted-foreground" };
-    if (rating >= 4.5) return { label: "Отлично", color: "text-green-500" };
-    if (rating >= 4.0) return { label: "Хорошо", color: "text-blue-500" };
-    if (rating >= 3.0) return { label: "Нормально", color: "text-yellow-500" };
-    return { label: "Плохо", color: "text-red-500" };
+    if (!rating) return { label: "Sharhlar yo'q", color: "text-muted-foreground" };
+    if (rating >= 4.5) return { label: "A'lo", color: "text-green-500" };
+    if (rating >= 4.0) return { label: "Yaxshi", color: "text-blue-500" };
+    if (rating >= 3.0) return { label: "O'rtacha", color: "text-yellow-500" };
+    return { label: "Yomon", color: "text-red-500" };
   };
 
   const ratingLevel = getRatingLevel(stats.averageRating);
@@ -119,10 +119,10 @@ export const CarrierStats = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <BarChart3 className="w-5 h-5" />
-          Статистика перевозчика
+          Haydovchi statistikasi
         </CardTitle>
         <CardDescription>
-          Ваша история и достижения
+          Sizning tarix va yutuqlaringiz
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -132,18 +132,20 @@ export const CarrierStats = () => {
           <div className="p-4 rounded-lg bg-green-500/10 text-center">
             <CheckCircle className="w-6 h-6 mx-auto mb-2 text-green-500" />
             <p className="text-2xl font-bold">{stats.completedDeals}</p>
-            <p className="text-xs text-muted-foreground">Выполнено</p>
+            <p className="text-xs text-muted-foreground">Bajarildi</p>
           </div>
 
           {/* Total Earnings */}
           <div className="p-4 rounded-lg bg-primary/10 text-center">
             <Wallet className="w-6 h-6 mx-auto mb-2 text-primary" />
             <p className="text-2xl font-bold">
-              {stats.totalEarnings >= 1000 
-                ? `${(stats.totalEarnings / 1000).toFixed(0)}к` 
+              {stats.totalEarnings >= 1000000 
+                ? `${(stats.totalEarnings / 1000000).toFixed(1)}M` 
+                : stats.totalEarnings >= 1000
+                ? `${(stats.totalEarnings / 1000).toFixed(0)}K`
                 : stats.totalEarnings}
             </p>
-            <p className="text-xs text-muted-foreground">Заработано ₽</p>
+            <p className="text-xs text-muted-foreground">Topilgan so'm</p>
           </div>
 
           {/* Average Rating */}
@@ -152,26 +154,26 @@ export const CarrierStats = () => {
             <p className="text-2xl font-bold">
               {stats.averageRating ? stats.averageRating.toFixed(1) : "—"}
             </p>
-            <p className="text-xs text-muted-foreground">Рейтинг</p>
+            <p className="text-xs text-muted-foreground">Reyting</p>
           </div>
 
           {/* In Progress */}
           <div className="p-4 rounded-lg bg-blue-500/10 text-center">
             <Clock className="w-6 h-6 mx-auto mb-2 text-blue-500" />
             <p className="text-2xl font-bold">{stats.inProgressDeals}</p>
-            <p className="text-xs text-muted-foreground">В работе</p>
+            <p className="text-xs text-muted-foreground">Jarayonda</p>
           </div>
         </div>
 
         {/* Completion Rate */}
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Завершённость</span>
+            <span className="text-muted-foreground">Bajarilish darajasi</span>
             <span className="font-medium">{completionRate}%</span>
           </div>
           <Progress value={completionRate} className="h-2" />
           <p className="text-xs text-muted-foreground">
-            {stats.completedDeals} из {stats.totalDeals} заказов выполнено
+            {stats.completedDeals} / {stats.totalDeals} ta buyurtma bajarildi
           </p>
         </div>
 
@@ -181,7 +183,7 @@ export const CarrierStats = () => {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Award className="w-5 h-5 text-gold" />
-                <span className="font-medium">Ваш рейтинг</span>
+                <span className="font-medium">Sizning reytingingiz</span>
               </div>
               <Badge className={ratingLevel.color}>{ratingLevel.label}</Badge>
             </div>
@@ -197,7 +199,7 @@ export const CarrierStats = () => {
                 />
               ))}
               <span className="ml-2 text-sm text-muted-foreground">
-                ({stats.totalRatings} отзывов)
+                ({stats.totalRatings} ta sharh)
               </span>
             </div>
           </div>
@@ -207,18 +209,18 @@ export const CarrierStats = () => {
         <div className="p-4 rounded-lg bg-muted/50">
           <div className="flex items-center gap-2 mb-3">
             <TrendingUp className="w-4 h-4 text-primary" />
-            <span className="font-medium">В этом месяце</span>
+            <span className="font-medium">Bu oy</span>
           </div>
           <div className="grid grid-cols-2 gap-4 text-center">
             <div>
               <p className="text-xl font-bold">{stats.thisMonthDeals}</p>
-              <p className="text-xs text-muted-foreground">Заказов</p>
+              <p className="text-xs text-muted-foreground">Buyurtmalar</p>
             </div>
             <div>
               <p className="text-xl font-bold">
-                {stats.thisMonthEarnings.toLocaleString("ru-RU")} ₽
+                {stats.thisMonthEarnings.toLocaleString("ru-RU")} so'm
               </p>
-              <p className="text-xs text-muted-foreground">Заработано</p>
+              <p className="text-xs text-muted-foreground">Topilgan</p>
             </div>
           </div>
         </div>
@@ -226,7 +228,7 @@ export const CarrierStats = () => {
         {/* Cancelled */}
         {stats.cancelledDeals > 0 && (
           <p className="text-xs text-muted-foreground text-center">
-            Отменено: {stats.cancelledDeals} заказов
+            Bekor qilindi: {stats.cancelledDeals} ta buyurtma
           </p>
         )}
       </CardContent>

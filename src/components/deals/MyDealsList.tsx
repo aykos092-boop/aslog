@@ -18,6 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ExportDealsButton } from "./ExportDealsButton";
+import { ExportDealsHistory } from "./ExportDealsHistory";
 
 interface Deal {
   id: string;
@@ -27,6 +28,7 @@ interface Deal {
   agreed_price: number;
   status: "pending" | "accepted" | "in_transit" | "delivered" | "cancelled";
   created_at: string;
+  completed_at?: string | null;
   order?: {
     cargo_type: string;
     pickup_address: string;
@@ -38,11 +40,11 @@ interface Deal {
 }
 
 const statusConfig = {
-  pending: { label: "Ожидает", icon: Truck, color: "bg-muted text-muted-foreground" },
-  accepted: { label: "Принята", icon: CheckCircle, color: "bg-customer text-white" },
-  in_transit: { label: "В пути", icon: Navigation, color: "bg-driver text-white" },
-  delivered: { label: "Доставлено", icon: Flag, color: "bg-gold text-white" },
-  cancelled: { label: "Отменена", icon: Truck, color: "bg-destructive text-white" },
+  pending: { label: "Kutilmoqda", icon: Truck, color: "bg-muted text-muted-foreground" },
+  accepted: { label: "Qabul qilindi", icon: CheckCircle, color: "bg-customer text-white" },
+  in_transit: { label: "Yo'lda", icon: Navigation, color: "bg-driver text-white" },
+  delivered: { label: "Yetkazildi", icon: Flag, color: "bg-gold text-white" },
+  cancelled: { label: "Bekor qilindi", icon: Truck, color: "bg-destructive text-white" },
 };
 
 export const MyDealsList = () => {
@@ -50,6 +52,12 @@ export const MyDealsList = () => {
   const navigate = useNavigate();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({
+    totalDeals: 0,
+    completedDeals: 0,
+    totalEarnings: 0,
+    averageRating: null as number | null,
+  });
 
   useEffect(() => {
     const fetchDeals = async () => {
@@ -96,6 +104,30 @@ export const MyDealsList = () => {
         other_profile: profilesMap.get(role === "client" ? deal.carrier_id : deal.client_id),
       }));
 
+      // Calculate stats for export
+      const completedDeals = dealsWithProfiles.filter(d => d.status === "delivered");
+      const totalEarnings = completedDeals.reduce((acc, d) => acc + (d.agreed_price || 0), 0);
+
+      // Fetch ratings for carrier
+      let avgRating = null;
+      if (role === "carrier") {
+        const { data: ratings } = await supabase
+          .from("ratings")
+          .select("score")
+          .eq("rated_id", user.id);
+        
+        if (ratings && ratings.length > 0) {
+          avgRating = ratings.reduce((acc, r) => acc + r.score, 0) / ratings.length;
+        }
+      }
+
+      setStats({
+        totalDeals: dealsWithProfiles.length,
+        completedDeals: completedDeals.length,
+        totalEarnings,
+        averageRating: avgRating,
+      });
+
       setDeals(dealsWithProfiles);
       setLoading(false);
     };
@@ -139,11 +171,11 @@ export const MyDealsList = () => {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Truck className="w-5 h-5" />
-            Мои сделки
+            Mening bitimlarim
           </CardTitle>
         </CardHeader>
         <CardContent className="py-8 text-center text-muted-foreground">
-          У вас пока нет активных сделок
+          Sizda hali faol bitimlar yo'q
         </CardContent>
       </Card>
     );
@@ -156,13 +188,18 @@ export const MyDealsList = () => {
           <div>
             <CardTitle className="flex items-center gap-2">
               <Truck className="w-5 h-5" />
-              Мои сделки
+              Mening bitimlarim
             </CardTitle>
             <CardDescription>
-              {deals.length} сделок
+              {deals.length} ta bitim
             </CardDescription>
           </div>
-          <ExportDealsButton deals={deals} role={role as "client" | "carrier"} />
+          <div className="flex gap-2">
+            <ExportDealsButton deals={deals} role={role as "client" | "carrier"} />
+            {role === "carrier" && (
+              <ExportDealsHistory deals={deals} stats={stats} />
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -193,21 +230,21 @@ export const MyDealsList = () => {
 
                   <div className="flex items-center gap-4 text-sm">
                     <span className="font-semibold text-driver">
-                      {deal.agreed_price.toLocaleString()} ₽
+                      {deal.agreed_price.toLocaleString()} so'm
                     </span>
                     <Link 
                       to={`/profile/${role === "client" ? deal.carrier_id : deal.client_id}`}
                       className="text-muted-foreground hover:text-primary underline-offset-2 hover:underline transition-colors"
                       onClick={(e) => e.stopPropagation()}
                     >
-                      {role === "client" ? "Перевозчик" : "Клиент"}: {deal.other_profile?.full_name || "—"}
+                      {role === "client" ? "Haydovchi" : "Mijoz"}: {deal.other_profile?.full_name || "—"}
                     </Link>
                   </div>
                 </div>
 
                 <Button variant="outline" size="sm">
                   <MessageSquare className="w-4 h-4 mr-1" />
-                  Чат
+                  Chat
                 </Button>
               </div>
             </div>

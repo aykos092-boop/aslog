@@ -138,14 +138,14 @@ export const PriceNegotiation = ({
 
     if (error) {
       toast({
-        title: "Ошибка",
-        description: "Не удалось отправить предложение",
+        title: "Xato",
+        description: "Taklifni yuborib bo'lmadi",
         variant: "destructive",
       });
     } else {
       toast({
-        title: "Предложение отправлено",
-        description: `Вы предложили ${parseFloat(newPrice).toLocaleString("ru-RU")} ₽`,
+        title: "Taklif yuborildi",
+        description: `Siz ${parseFloat(newPrice).toLocaleString("ru-RU")} so'm taklif qildingiz`,
       });
       setNewPrice("");
       setNewMessage("");
@@ -172,9 +172,23 @@ export const PriceNegotiation = ({
           .eq("id", responseId);
       }
 
+      // IMPORTANT: Also update the deal's agreed_price if this negotiation is for a deal
+      // Find any deal associated with this order and update its agreed_price
+      const { data: deals } = await supabase
+        .from("deals")
+        .select("id")
+        .eq("order_id", orderId);
+
+      if (deals && deals.length > 0) {
+        await supabase
+          .from("deals")
+          .update({ agreed_price: negotiation.proposed_price })
+          .eq("order_id", orderId);
+      }
+
       toast({
-        title: "Цена согласована!",
-        description: `Итоговая цена: ${negotiation.proposed_price.toLocaleString("ru-RU")} ₽`,
+        title: "Narx kelishildi!",
+        description: `Yakuniy narx: ${negotiation.proposed_price.toLocaleString("ru-RU")} so'm`,
       });
 
       onPriceAgreed?.(negotiation.proposed_price);
@@ -185,8 +199,8 @@ export const PriceNegotiation = ({
         .eq("id", negotiationId);
 
       toast({
-        title: "Предложение отклонено",
-        description: "Вы можете предложить свою цену",
+        title: "Taklif rad etildi",
+        description: "Siz o'z narxingizni taklif qilishingiz mumkin",
       });
     }
 
@@ -196,11 +210,11 @@ export const PriceNegotiation = ({
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "pending":
-        return <Badge variant="secondary">Ожидает ответа</Badge>;
+        return <Badge variant="secondary">Javob kutilmoqda</Badge>;
       case "accepted":
-        return <Badge className="bg-green-500">Принято</Badge>;
+        return <Badge className="bg-green-500">Qabul qilindi</Badge>;
       case "rejected":
-        return <Badge variant="destructive">Отклонено</Badge>;
+        return <Badge variant="destructive">Rad etildi</Badge>;
       default:
         return null;
     }
@@ -219,12 +233,12 @@ export const PriceNegotiation = ({
       <CardHeader className="pb-3">
         <CardTitle className="text-base flex items-center gap-2">
           <Banknote className="w-4 h-4" />
-          Торг по цене
+          Narx savdosi
         </CardTitle>
         <CardDescription>
           {clientPrice && (
             <span className="text-sm">
-              Желаемая цена клиента: <strong>{clientPrice.toLocaleString("ru-RU")} ₽</strong>
+              Mijoz narxi: <strong>{clientPrice.toLocaleString("ru-RU")} so'm</strong>
             </span>
           )}
         </CardDescription>
@@ -232,8 +246,8 @@ export const PriceNegotiation = ({
       <CardContent className="space-y-4">
         {/* Current Price */}
         <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-          <span className="text-sm text-muted-foreground">Текущая цена</span>
-          <span className="text-lg font-bold">{currentPrice.toLocaleString("ru-RU")} ₽</span>
+          <span className="text-sm text-muted-foreground">Joriy narx</span>
+          <span className="text-lg font-bold">{currentPrice.toLocaleString("ru-RU")} so'm</span>
         </div>
 
         {/* Negotiation History */}
@@ -257,7 +271,7 @@ export const PriceNegotiation = ({
                       <span className="text-sm font-medium">{neg.proposer_name}</span>
                       <ArrowRight className="w-3 h-3" />
                       <span className="font-bold text-primary">
-                        {neg.proposed_price.toLocaleString("ru-RU")} ₽
+                        {neg.proposed_price.toLocaleString("ru-RU")} so'm
                       </span>
                       {getStatusBadge(neg.status)}
                     </div>
@@ -303,7 +317,7 @@ export const PriceNegotiation = ({
           <div className="p-4 rounded-lg bg-green-100 dark:bg-green-950/50 text-center">
             <Check className="w-6 h-6 mx-auto text-green-600 mb-2" />
             <p className="font-medium text-green-800 dark:text-green-200">
-              Цена согласована: {latestNegotiation.proposed_price.toLocaleString("ru-RU")} ₽
+              Narx kelishildi: {latestNegotiation.proposed_price.toLocaleString("ru-RU")} so'm
             </p>
           </div>
         )}
@@ -312,18 +326,18 @@ export const PriceNegotiation = ({
         {canPropose && latestNegotiation?.status !== "accepted" && (
           <div className="space-y-3 pt-2 border-t">
             <p className="text-sm font-medium">
-              {isCarrier ? "Предложить свою цену:" : "Предложить цену:"}
+              {isCarrier ? "O'z narxingizni taklif qiling:" : "Narxni taklif qiling:"}
             </p>
             <div className="flex gap-2">
               <Input
                 type="number"
-                placeholder="Ваша цена в ₽"
+                placeholder="Narx (so'm)"
                 value={newPrice}
                 onChange={(e) => setNewPrice(e.target.value)}
               />
             </div>
             <Textarea
-              placeholder="Комментарий (необязательно)"
+              placeholder="Izoh (ixtiyoriy)"
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               className="resize-none"
@@ -339,7 +353,7 @@ export const PriceNegotiation = ({
               ) : (
                 <MessageSquare className="w-4 h-4 mr-2" />
               )}
-              Предложить {newPrice && `${parseFloat(newPrice).toLocaleString("ru-RU")} ₽`}
+              Taklif qilish {newPrice && `${parseFloat(newPrice).toLocaleString("ru-RU")} so'm`}
             </Button>
           </div>
         )}

@@ -3,6 +3,8 @@ import { MyResponsesList } from "./MyResponsesList";
 import { MyDealsList } from "@/components/deals/MyDealsList";
 import { CarrierPreferences } from "./CarrierPreferences";
 import { CarrierStats } from "./CarrierStats";
+import { CarrierAchievements } from "./CarrierAchievements";
+import { CentralAsiaRouteCalculator } from "@/components/calculator/CentralAsiaRouteCalculator";
 
 export const CarrierDashboard = () => {
   return (
@@ -11,12 +13,18 @@ export const CarrierDashboard = () => {
         <div className="lg:col-span-2">
           <MyDealsList />
         </div>
-        <CarrierStats />
+        <div className="space-y-6">
+          <CarrierStats />
+          <CarrierAchievements />
+        </div>
       </div>
       <AvailableOrdersList />
       <div className="grid lg:grid-cols-2 gap-6">
         <MyResponsesList />
-        <CarrierPreferences />
+        <div className="space-y-6">
+          <CarrierPreferences />
+          <CentralAsiaRouteCalculator />
+        </div>
       </div>
     </div>
   );
