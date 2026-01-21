@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { 
   ArrowLeft, Package, MapPin, MessageSquare, Loader2, 
-  Truck, CheckCircle, Navigation, Flag, Map
+  Truck, CheckCircle, Navigation, Flag, Star
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -19,6 +19,8 @@ import {
 import { ChatMessages } from "@/components/chat/ChatMessages";
 import { LiveMap } from "@/components/tracking/LiveMap";
 import { GpsTracker } from "@/components/tracking/GpsTracker";
+import { RatingForm } from "@/components/ratings/RatingForm";
+import { RatingDisplay } from "@/components/ratings/RatingDisplay";
 
 interface Deal {
   id: string;
@@ -34,6 +36,15 @@ interface Deal {
     delivery_address: string;
     pickup_date: string;
   };
+}
+
+interface Rating {
+  id: string;
+  score: number;
+  comment: string | null;
+  created_at: string;
+  rater_id: string;
+  rated_id: string;
 }
 
 const statusConfig = {
@@ -54,6 +65,8 @@ const DealChat = () => {
   const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [otherParticipantName, setOtherParticipantName] = useState<string>("");
+  const [myRating, setMyRating] = useState<Rating | null>(null);
+  const [otherRating, setOtherRating] = useState<Rating | null>(null);
 
   const fetchDeal = async () => {
     if (!dealId || !user) return;
@@ -78,10 +91,10 @@ const DealChat = () => {
     }
 
     // Verify user is participant
-    const isClient = dealData.client_id === user.id;
-    const isCarrier = dealData.carrier_id === user.id;
+    const isClientUser = dealData.client_id === user.id;
+    const isCarrierUser = dealData.carrier_id === user.id;
 
-    if (!isClient && !isCarrier) {
+    if (!isClientUser && !isCarrierUser) {
       toast({
         title: "Доступ запрещён",
         description: "Вы не являетесь участником этой сделки",
@@ -94,7 +107,7 @@ const DealChat = () => {
     setDeal(dealData);
 
     // Get other participant's name
-    const otherUserId = isClient ? dealData.carrier_id : dealData.client_id;
+    const otherUserId = isClientUser ? dealData.carrier_id : dealData.client_id;
     const { data: profileData } = await supabase
       .from("profiles")
       .select("full_name")
@@ -105,8 +118,25 @@ const DealChat = () => {
     setLoading(false);
   };
 
+  const fetchRatings = async () => {
+    if (!dealId || !user) return;
+
+    const { data: ratings } = await supabase
+      .from("ratings")
+      .select("*")
+      .eq("deal_id", dealId);
+
+    if (ratings) {
+      const mine = ratings.find(r => r.rater_id === user.id);
+      const theirs = ratings.find(r => r.rated_id === user.id);
+      setMyRating(mine || null);
+      setOtherRating(theirs || null);
+    }
+  };
+
   useEffect(() => {
     fetchDeal();
+    fetchRatings();
   }, [dealId, user]);
 
   // Subscribe to deal status changes
@@ -191,6 +221,8 @@ const DealChat = () => {
 
   const isClient = deal.client_id === user?.id;
   const showGpsTracking = deal.status === "in_transit";
+  const showRating = deal.status === "delivered";
+  const otherUserId = isCarrier ? deal.client_id : deal.carrier_id;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -284,13 +316,59 @@ const DealChat = () => {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col lg:flex-row min-h-0">
-        {/* GPS Tracking Panel */}
-        {showGpsTracking && (
-          <div className="lg:w-80 shrink-0 border-b lg:border-b-0 lg:border-r p-4 bg-muted/20">
-            {isCarrier ? (
-              <GpsTracker dealId={dealId!} />
-            ) : (
-              <LiveMap dealId={dealId!} carrierName={otherParticipantName} />
+        {/* Side Panel: GPS or Rating */}
+        {(showGpsTracking || showRating) && (
+          <div className="lg:w-80 shrink-0 border-b lg:border-b-0 lg:border-r p-4 bg-muted/20 space-y-4 overflow-y-auto">
+            {/* GPS Tracking */}
+            {showGpsTracking && (
+              isCarrier ? (
+                <GpsTracker dealId={dealId!} />
+              ) : (
+                <LiveMap dealId={dealId!} carrierName={otherParticipantName} />
+              )
+            )}
+
+            {/* Rating Section */}
+            {showRating && (
+              <>
+                {myRating ? (
+                  <RatingDisplay 
+                    rating={myRating} 
+                    title="Ваш отзыв" 
+                  />
+                ) : (
+                  <RatingForm
+                    dealId={dealId!}
+                    ratedUserId={otherUserId}
+                    ratedUserName={otherParticipantName}
+                    onRatingSubmitted={fetchRatings}
+                  />
+                )}
+
+                {otherRating && (
+                  <Card>
+                    <CardContent className="pt-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Star className="w-4 h-4 text-gold fill-gold" />
+                        <span className="font-medium text-sm">Отзыв от {otherParticipantName}</span>
+                      </div>
+                      <div className="flex gap-0.5 mb-2">
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star
+                            key={s}
+                            className={`w-4 h-4 ${
+                              s <= otherRating.score ? "fill-gold text-gold" : "text-muted-foreground"
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      {otherRating.comment && (
+                        <p className="text-sm text-muted-foreground italic">"{otherRating.comment}"</p>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+              </>
             )}
           </div>
         )}
