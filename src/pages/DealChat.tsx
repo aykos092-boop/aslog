@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { 
   ArrowLeft, Package, MapPin, MessageSquare, Loader2, 
-  Truck, CheckCircle, Navigation, Flag 
+  Truck, CheckCircle, Navigation, Flag, Map
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -17,6 +17,8 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { ChatMessages } from "@/components/chat/ChatMessages";
+import { LiveMap } from "@/components/tracking/LiveMap";
+import { GpsTracker } from "@/components/tracking/GpsTracker";
 
 interface Deal {
   id: string;
@@ -187,6 +189,9 @@ const DealChat = () => {
   const StatusIcon = status.icon;
   const isCarrier = deal.carrier_id === user?.id;
 
+  const isClient = deal.client_id === user?.id;
+  const showGpsTracking = deal.status === "in_transit";
+
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Header */}
@@ -277,13 +282,27 @@ const DealChat = () => {
         </div>
       </div>
 
-      {/* Chat */}
-      <div className="flex-1 flex flex-col min-h-0">
-        <ChatMessages
-          contextType="deal"
-          contextId={dealId!}
-          participantIds={[deal.client_id, deal.carrier_id]}
-        />
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col lg:flex-row min-h-0">
+        {/* GPS Tracking Panel */}
+        {showGpsTracking && (
+          <div className="lg:w-80 shrink-0 border-b lg:border-b-0 lg:border-r p-4 bg-muted/20">
+            {isCarrier ? (
+              <GpsTracker dealId={dealId!} />
+            ) : (
+              <LiveMap dealId={dealId!} carrierName={otherParticipantName} />
+            )}
+          </div>
+        )}
+
+        {/* Chat */}
+        <div className="flex-1 flex flex-col min-h-0">
+          <ChatMessages
+            contextType="deal"
+            contextId={dealId!}
+            participantIds={[deal.client_id, deal.carrier_id]}
+          />
+        </div>
       </div>
     </div>
   );
