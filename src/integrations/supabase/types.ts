@@ -346,6 +346,7 @@ export type Database = {
         Row: {
           cargo_type: string
           client_id: string
+          client_price: number | null
           created_at: string
           delivery_address: string
           description: string | null
@@ -363,6 +364,7 @@ export type Database = {
         Insert: {
           cargo_type: string
           client_id: string
+          client_price?: number | null
           created_at?: string
           delivery_address: string
           description?: string | null
@@ -380,6 +382,7 @@ export type Database = {
         Update: {
           cargo_type?: string
           client_id?: string
+          client_price?: number | null
           created_at?: string
           delivery_address?: string
           description?: string | null

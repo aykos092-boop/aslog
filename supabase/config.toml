@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.loyalty-service]
 verify_jwt = false
+
+[functions.notify-new-order]
+verify_jwt = false

@@ -47,6 +47,7 @@ const orderSchema = z.object({
   delivery_address: z.string().min(5, "Укажите адрес выгрузки"),
   pickup_date: z.date({ required_error: "Выберите дату" }),
   description: z.string().optional(),
+  client_price: z.string().optional(),
 });
 
 type OrderFormValues = z.infer<typeof orderSchema>;
@@ -85,6 +86,7 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
       pickup_address: "",
       delivery_address: "",
       description: "",
+      client_price: "",
     },
   });
 
@@ -175,7 +177,15 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
       pickup_date: data.pickup_date.toISOString(),
       description: data.description || null,
       photo_urls: cargoImages.length > 0 ? cargoImages : null,
+      client_price: data.client_price ? parseFloat(data.client_price) : null,
     }).select().single();
+
+    // Notify carriers about new order via edge function
+    if (orderData) {
+      supabase.functions.invoke("notify-new-order", {
+        body: { orderId: orderData.id },
+      }).catch(err => console.error("Failed to notify carriers:", err));
+    }
 
     if (error) {
       setLoading(false);
@@ -342,47 +352,70 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
               />
             </div>
 
-            {/* Date Picker */}
-            <FormField
-              control={form.control}
-              name="pickup_date"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Дата погрузки *</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full md:w-[280px] pl-3 text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          {field.value ? (
-                            format(field.value, "PPP", { locale: ru })
-                          ) : (
-                            <span>Выберите дату</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) => date < new Date()}
-                        initialFocus
-                        className={cn("p-3 pointer-events-auto")}
+            {/* Date Picker and Price */}
+            <div className="grid md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="pickup_date"
+                render={({ field }) => (
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Дата погрузки *</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className={cn(
+                              "w-full pl-3 text-left font-normal",
+                              !field.value && "text-muted-foreground"
+                            )}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP", { locale: ru })
+                            ) : (
+                              <span>Выберите дату</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) => date < new Date()}
+                          initialFocus
+                          className={cn("p-3 pointer-events-auto")}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="client_price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Ваша цена (₽)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        placeholder="Укажите желаемую цену" 
+                        {...field} 
                       />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                    </FormControl>
+                    <p className="text-xs text-muted-foreground">
+                      Необязательно. Перевозчики увидят вашу цену
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             {/* Cargo Images */}
             <div className="space-y-2">

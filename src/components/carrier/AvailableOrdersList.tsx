@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
-import { Package, MapPin, Calendar, Weight, Ruler, Send, Loader2, Eye, Search, Filter, X, CalendarIcon, ArrowUpDown, Image as ImageIcon } from "lucide-react";
+import { Package, MapPin, Calendar, Weight, Ruler, Send, Loader2, Eye, Search, Filter, X, CalendarIcon, ArrowUpDown, Image as ImageIcon, Banknote } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -54,6 +54,7 @@ interface Order {
   status: string;
   created_at: string;
   photo_urls: string[] | null;
+  client_price: number | null;
   client_profile?: {
     full_name: string | null;
   };
@@ -453,6 +454,12 @@ export const AvailableOrdersList = () => {
                   {/* Header */}
                   <div className="flex items-center gap-3 flex-wrap">
                     <h3 className="font-semibold text-lg">{order.cargo_type}</h3>
+                    {order.client_price && (
+                      <Badge className="bg-primary text-primary-foreground">
+                        <Banknote className="w-3 h-3 mr-1" />
+                        {order.client_price.toLocaleString("ru-RU")} ₽
+                      </Badge>
+                    )}
                     {order.has_responded && (
                       <Badge variant="outline" className="bg-driver-light text-driver border-driver">
                         Вы откликнулись
