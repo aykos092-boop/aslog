@@ -6,6 +6,12 @@ verify_jwt = false
 [functions.geocode]
 verify_jwt = false
 
+[functions.navigation-tts]
+verify_jwt = false
+
+[functions.proximity-notification]
+verify_jwt = false
+
 [functions.send-push-notification]
 verify_jwt = false
 

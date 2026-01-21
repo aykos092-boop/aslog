@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ChatMessages } from "@/components/chat/ChatMessages";
 import { LiveMap } from "@/components/tracking/LiveMap";
-import { DriverMapView } from "@/components/tracking/DriverMapView";
+import { GoogleNavigator } from "@/components/tracking/GoogleNavigator";
 import { GpsTracker } from "@/components/tracking/GpsTracker";
 import { RatingForm } from "@/components/ratings/RatingForm";
 import { RatingDisplay } from "@/components/ratings/RatingDisplay";
@@ -435,8 +435,10 @@ const DealChat = () => {
           {showGpsTracking && (
             isCarrier ? (
               <div className="flex-1 min-h-0">
-                <DriverMapView 
+                <GoogleNavigator 
                   dealId={dealId!}
+                  clientId={deal.client_id}
+                  carrierName={otherParticipantName}
                   pickupAddress={deal.order?.pickup_address}
                   deliveryAddress={deal.order?.delivery_address}
                 />
