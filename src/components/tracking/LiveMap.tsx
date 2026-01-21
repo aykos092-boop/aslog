@@ -1,26 +1,7 @@
-import { useEffect, useRef, useState } from "react";
-import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import { useEffect, useState, useMemo } from "react";
+import { Loader2, Navigation, MapPin } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Navigation } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-
-// Fix default marker icon issue with webpack/vite
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png",
-  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png",
-});
-
-// Custom truck icon
-const truckIcon = new L.Icon({
-  iconUrl: "https://cdn-icons-png.flaticon.com/512/3097/3097180.png",
-  iconSize: [40, 40],
-  iconAnchor: [20, 40],
-  popupAnchor: [0, -40],
-});
 
 interface GpsLocation {
   id: string;
@@ -34,21 +15,9 @@ interface LiveMapProps {
   carrierName?: string;
 }
 
-// Component to recenter map when location changes
-const RecenterMap = ({ lat, lng }: { lat: number; lng: number }) => {
-  const map = useMap();
-  
-  useEffect(() => {
-    map.setView([lat, lng], map.getZoom());
-  }, [lat, lng, map]);
-  
-  return null;
-};
-
 export const LiveMap = ({ dealId, carrierName }: LiveMapProps) => {
   const [location, setLocation] = useState<GpsLocation | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchLatestLocation = async () => {
@@ -103,6 +72,16 @@ export const LiveMap = ({ dealId, carrierName }: LiveMapProps) => {
     };
   }, [dealId]);
 
+  // Generate OpenStreetMap static URL
+  const mapUrl = useMemo(() => {
+    if (!location) return null;
+    // Using OpenStreetMap static tile URL with marker
+    const zoom = 14;
+    const lat = location.latitude;
+    const lng = location.longitude;
+    return `https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.02},${lat - 0.015},${lng + 0.02},${lat + 0.015}&layer=mapnik&marker=${lat},${lng}`;
+  }, [location]);
+
   if (loading) {
     return (
       <Card>
@@ -124,6 +103,7 @@ export const LiveMap = ({ dealId, carrierName }: LiveMapProps) => {
           </CardTitle>
         </CardHeader>
         <CardContent className="text-center py-6 text-muted-foreground">
+          <MapPin className="w-8 h-8 mx-auto mb-2 opacity-50" />
           <p>Данные о местоположении пока не получены</p>
           <p className="text-xs mt-1">Перевозчик ещё не начал передавать координаты</p>
         </CardContent>
@@ -143,29 +123,20 @@ export const LiveMap = ({ dealId, carrierName }: LiveMapProps) => {
         </CardTitle>
       </CardHeader>
       <CardContent className="p-0">
-        <div className="h-64 rounded-b-lg overflow-hidden">
-          <MapContainer
-            center={[location.latitude, location.longitude]}
-            zoom={14}
-            style={{ height: "100%", width: "100%" }}
-            scrollWheelZoom={false}
-          >
-            <TileLayer
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            <Marker position={[location.latitude, location.longitude]} icon={truckIcon}>
-              <Popup>
-                <div className="text-center">
-                  <p className="font-medium">{carrierName || "Перевозчик"}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {location.latitude.toFixed(6)}, {location.longitude.toFixed(6)}
-                  </p>
-                </div>
-              </Popup>
-            </Marker>
-            <RecenterMap lat={location.latitude} lng={location.longitude} />
-          </MapContainer>
+        <div className="h-64 rounded-b-lg overflow-hidden relative">
+          <iframe
+            title="Карта местоположения"
+            src={mapUrl!}
+            className="w-full h-full border-0"
+            loading="lazy"
+          />
+          {/* Overlay with carrier info */}
+          <div className="absolute bottom-2 left-2 bg-background/90 backdrop-blur-sm rounded-lg px-3 py-2 text-sm shadow-lg">
+            <p className="font-medium">{carrierName || "Перевозчик"}</p>
+            <p className="text-xs text-muted-foreground">
+              {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}
+            </p>
+          </div>
         </div>
       </CardContent>
     </Card>
