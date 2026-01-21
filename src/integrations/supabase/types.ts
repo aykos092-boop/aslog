@@ -144,6 +144,39 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          is_read: boolean
+          title: string
+          type: string
+          url: string | null
+          user_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          title: string
+          type?: string
+          url?: string | null
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          title?: string
+          type?: string
+          url?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           cargo_type: string

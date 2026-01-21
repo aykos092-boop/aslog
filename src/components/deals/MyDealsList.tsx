@@ -17,6 +17,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { ExportDealsButton } from "./ExportDealsButton";
 
 interface Deal {
   id: string;
@@ -151,13 +152,18 @@ export const MyDealsList = () => {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Truck className="w-5 h-5" />
-          Мои сделки
-        </CardTitle>
-        <CardDescription>
-          {deals.length} сделок
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Truck className="w-5 h-5" />
+              Мои сделки
+            </CardTitle>
+            <CardDescription>
+              {deals.length} сделок
+            </CardDescription>
+          </div>
+          <ExportDealsButton deals={deals} role={role as "client" | "carrier"} />
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
         {deals.map((deal) => {
