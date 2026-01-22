@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, useEffect } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 interface VoiceNavigationOptions {
@@ -6,26 +6,61 @@ interface VoiceNavigationOptions {
   language?: string;
 }
 
-// Constants for rate limiting and circuit breaker
+// Constants for rate limiting
 const MAX_QUEUE_SIZE = 3;
 const PHRASE_COOLDOWN_MS = 15000; // 15 seconds between identical phrases
-const MAX_CONSECUTIVE_ERRORS = 2;
-const DISABLE_DURATION_MS = 60000; // 1 minute pause after errors
 
 export const useVoiceNavigation = (options: VoiceNavigationOptions = {}) => {
   const { enabled = true, language = "ru" } = options;
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [isTemporarilyDisabled, setIsTemporarilyDisabled] = useState(false);
   const { toast } = useToast();
   
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const queueRef = useRef<string[]>([]);
   const isPlayingRef = useRef(false);
   const recentPhrasesRef = useRef<Map<string, number>>(new Map());
-  const consecutiveErrorsRef = useRef<number>(0);
-  const ttsDisabledUntilRef = useRef<number>(0);
+  const synthRef = useRef<SpeechSynthesis | null>(null);
+  const voicesLoadedRef = useRef(false);
   const toastShownRef = useRef(false);
+
+  // Initialize speech synthesis
+  useEffect(() => {
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      synthRef.current = window.speechSynthesis;
+      
+      // Load voices
+      const loadVoices = () => {
+        const voices = synthRef.current?.getVoices() || [];
+        voicesLoadedRef.current = voices.length > 0;
+      };
+      
+      loadVoices();
+      synthRef.current.addEventListener("voiceschanged", loadVoices);
+      
+      return () => {
+        synthRef.current?.removeEventListener("voiceschanged", loadVoices);
+      };
+    }
+  }, []);
+
+  // Get best voice for language
+  const getBestVoice = useCallback((lang: string): SpeechSynthesisVoice | null => {
+    if (!synthRef.current) return null;
+    
+    const voices = synthRef.current.getVoices();
+    const langCode = lang === "ru" ? "ru" : "en";
+    
+    // Try to find a voice for the language
+    let voice = voices.find(v => v.lang.startsWith(langCode) && v.localService);
+    if (!voice) {
+      voice = voices.find(v => v.lang.startsWith(langCode));
+    }
+    if (!voice && voices.length > 0) {
+      voice = voices[0];
+    }
+    
+    return voice || null;
+  }, []);
 
   // Check if phrase was recently spoken (deduplication)
   const isDuplicatePhrase = useCallback((text: string): boolean => {
@@ -47,20 +82,60 @@ export const useVoiceNavigation = (options: VoiceNavigationOptions = {}) => {
     return false;
   }, []);
 
+  // Speak using browser's Web Speech API
+  const speakWithBrowser = useCallback((text: string): Promise<void> => {
+    return new Promise((resolve) => {
+      if (!synthRef.current) {
+        resolve();
+        return;
+      }
+
+      // Cancel any ongoing speech
+      synthRef.current.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(text);
+      const voice = getBestVoice(language);
+      
+      if (voice) {
+        utterance.voice = voice;
+      }
+      
+      utterance.lang = language === "ru" ? "ru-RU" : "en-US";
+      utterance.rate = 1.1; // Slightly faster for navigation
+      utterance.pitch = 1;
+      utterance.volume = 1;
+
+      utterance.onstart = () => {
+        setIsSpeaking(true);
+      };
+
+      utterance.onend = () => {
+        setIsSpeaking(false);
+        resolve();
+      };
+
+      utterance.onerror = () => {
+        setIsSpeaking(false);
+        resolve();
+      };
+
+      synthRef.current.speak(utterance);
+    });
+  }, [language, getBestVoice]);
+
   const speak = useCallback(async (text: string) => {
     if (!enabled || !text) return;
 
-    // Check if TTS is temporarily disabled after errors
-    const now = Date.now();
-    if (now < ttsDisabledUntilRef.current) {
+    // Check browser support
+    if (!synthRef.current) {
+      if (!toastShownRef.current) {
+        toastShownRef.current = true;
+        toast({
+          title: "Голос недоступен",
+          description: "Ваш браузер не поддерживает синтез речи",
+        });
+      }
       return;
-    }
-    
-    // Re-enable if cooldown passed
-    if (isTemporarilyDisabled && now >= ttsDisabledUntilRef.current) {
-      setIsTemporarilyDisabled(false);
-      consecutiveErrorsRef.current = 0;
-      toastShownRef.current = false;
     }
 
     // Deduplication - skip if same phrase was spoken recently
@@ -82,111 +157,14 @@ export const useVoiceNavigation = (options: VoiceNavigationOptions = {}) => {
         const currentText = queueRef.current.shift();
         if (!currentText) continue;
 
-        // Double-check disabled state
-        if (Date.now() < ttsDisabledUntilRef.current) {
-          queueRef.current = [];
-          break;
-        }
-
         isPlayingRef.current = true;
         setIsLoading(true);
 
         try {
-          const response = await fetch(
-            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/navigation-tts`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "apikey": import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
-                "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-              },
-              body: JSON.stringify({ text: currentText, language }),
-            }
-          );
-
-          // Graceful handling for 401/429/5xx - don't crash the app
-          if (!response.ok) {
-            const status = response.status;
-            consecutiveErrorsRef.current++;
-
-            if (status === 401 || status === 429 || status >= 500) {
-              // Expected provider errors - handle gracefully
-              if (consecutiveErrorsRef.current >= MAX_CONSECUTIVE_ERRORS) {
-                ttsDisabledUntilRef.current = Date.now() + DISABLE_DURATION_MS;
-                queueRef.current = [];
-                setIsTemporarilyDisabled(true);
-
-                // Show toast only once
-                if (!toastShownRef.current) {
-                  toastShownRef.current = true;
-                  toast({
-                    title: "Голос временно недоступен",
-                    description: "Навигация продолжается без озвучки",
-                  });
-                }
-              }
-              
-              setIsLoading(false);
-              continue; // Skip to next phrase
-            }
-            
-            setIsLoading(false);
-            continue;
-          }
-
-          // Success - reset error counter
-          consecutiveErrorsRef.current = 0;
-
-          const data = await response.json();
-          
-          if (data.audioContent) {
-            const audioUrl = `data:audio/mpeg;base64,${data.audioContent}`;
-            
-            if (audioRef.current) {
-              audioRef.current.pause();
-              audioRef.current = null;
-            }
-
-            const audio = new Audio(audioUrl);
-            audioRef.current = audio;
-            
-            setIsLoading(false);
-            setIsSpeaking(true);
-
-            await new Promise<void>((resolve) => {
-              audio.onended = () => {
-                setIsSpeaking(false);
-                resolve();
-              };
-              audio.onerror = () => {
-                setIsSpeaking(false);
-                resolve();
-              };
-              audio.play().catch(() => {
-                setIsSpeaking(false);
-                resolve();
-              });
-            });
-          } else {
-            setIsLoading(false);
-          }
+          setIsLoading(false);
+          await speakWithBrowser(currentText);
         } catch (error) {
-          // Network errors - handle gracefully
-          consecutiveErrorsRef.current++;
-          
-          if (consecutiveErrorsRef.current >= MAX_CONSECUTIVE_ERRORS && !toastShownRef.current) {
-            ttsDisabledUntilRef.current = Date.now() + DISABLE_DURATION_MS;
-            queueRef.current = [];
-            setIsTemporarilyDisabled(true);
-            toastShownRef.current = true;
-            
-            toast({
-              title: "Голос временно недоступен",
-              description: "Навигация продолжается без озвучки",
-            });
-          }
-          
+          console.error("TTS error:", error);
           setIsLoading(false);
           setIsSpeaking(false);
         }
@@ -196,13 +174,12 @@ export const useVoiceNavigation = (options: VoiceNavigationOptions = {}) => {
     };
 
     processQueue();
-  }, [enabled, language, isDuplicatePhrase, isTemporarilyDisabled, toast]);
+  }, [enabled, isDuplicatePhrase, speakWithBrowser, toast]);
 
   const stop = useCallback(() => {
     queueRef.current = [];
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
+    if (synthRef.current) {
+      synthRef.current.cancel();
     }
     setIsSpeaking(false);
     isPlayingRef.current = false;
@@ -233,6 +210,6 @@ export const useVoiceNavigation = (options: VoiceNavigationOptions = {}) => {
     stop,
     isSpeaking,
     isLoading,
-    isTemporarilyDisabled,
+    isTemporarilyDisabled: false,
   };
 };
