@@ -1,3 +1,4 @@
+import { useLocation } from "react-router-dom";
 import { AvailableOrdersList } from "./AvailableOrdersList";
 import { MyResponsesList } from "./MyResponsesList";
 import { MyDealsList } from "@/components/deals/MyDealsList";
@@ -6,30 +7,90 @@ import { CarrierStats } from "./CarrierStats";
 import { CarrierAchievements } from "./CarrierAchievements";
 import { CarrierLevel } from "./CarrierLevel";
 import { CentralAsiaRouteCalculator } from "@/components/calculator/CentralAsiaRouteCalculator";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Truck, MessageSquare, FileText, Star, Settings, Calculator } from "lucide-react";
 
 export const CarrierDashboard = () => {
+  const location = useLocation();
+  const { t } = useLanguage();
+  
+  // Determine active tab from hash
+  const hash = location.hash.replace('#', '') || 'available';
+  const activeTab = ['available', 'responses', 'deals', 'achievements', 'settings'].includes(hash) ? hash : 'available';
+
   return (
-    <div className="space-y-8">
-      <div className="grid lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <MyDealsList />
-        </div>
-        <div className="space-y-6">
-          <CarrierLevel />
+    <div className="space-y-6">
+      {/* Top Stats Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+        <CarrierLevel />
+        <div className="md:col-span-1 lg:col-span-2">
           <CarrierStats />
         </div>
       </div>
-      <AvailableOrdersList />
-      <div className="grid lg:grid-cols-2 gap-6">
-        <div className="space-y-6">
+
+      <Tabs defaultValue={activeTab} className="w-full">
+        <TabsList className="w-full flex flex-wrap h-auto gap-1 bg-muted/50 p-1 rounded-xl mb-6">
+          <TabsTrigger 
+            value="available" 
+            className="flex-1 min-w-[100px] gap-2 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg"
+          >
+            <Truck className="w-4 h-4" />
+            <span className="hidden sm:inline">{t("orders.available")}</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="responses" 
+            className="flex-1 min-w-[100px] gap-2 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg"
+          >
+            <MessageSquare className="w-4 h-4" />
+            <span className="hidden sm:inline">{t("carrier.myResponses")}</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="deals" 
+            className="flex-1 min-w-[100px] gap-2 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg"
+          >
+            <FileText className="w-4 h-4" />
+            <span className="hidden sm:inline">{t("deals.myDeals")}</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="achievements" 
+            className="flex-1 min-w-[100px] gap-2 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg"
+          >
+            <Star className="w-4 h-4" />
+            <span className="hidden sm:inline">{t("carrier.achievements")}</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="settings" 
+            className="flex-1 min-w-[100px] gap-2 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg"
+          >
+            <Settings className="w-4 h-4" />
+            <span className="hidden sm:inline">{t("carrier.preferences")}</span>
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="available" className="mt-0 animate-fade-up">
+          <AvailableOrdersList />
+        </TabsContent>
+
+        <TabsContent value="responses" className="mt-0 animate-fade-up">
           <MyResponsesList />
+        </TabsContent>
+
+        <TabsContent value="deals" className="mt-0 animate-fade-up">
+          <MyDealsList />
+        </TabsContent>
+
+        <TabsContent value="achievements" className="mt-0 animate-fade-up">
           <CarrierAchievements />
-        </div>
-        <div className="space-y-6">
-          <CarrierPreferences />
-          <CentralAsiaRouteCalculator />
-        </div>
-      </div>
+        </TabsContent>
+
+        <TabsContent value="settings" className="mt-0 animate-fade-up">
+          <div className="grid lg:grid-cols-2 gap-6">
+            <CarrierPreferences />
+            <CentralAsiaRouteCalculator />
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

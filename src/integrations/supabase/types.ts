@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_roles: {
+        Row: {
+          admin_role: Database["public"]["Enums"]["admin_role"]
+          created_at: string
+          id: string
+          permissions: Json | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_role?: Database["public"]["Enums"]["admin_role"]
+          created_at?: string
+          id?: string
+          permissions?: Json | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_role?: Database["public"]["Enums"]["admin_role"]
+          created_at?: string
+          id?: string
+          permissions?: Json | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       ai_chat_logs: {
         Row: {
           created_at: string
@@ -61,6 +88,45 @@ export type Database = {
           id?: string
           messages?: Json
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          ip_address: string | null
+          new_data: Json | null
+          old_data: Json | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: string | null
+          new_data?: Json | null
+          old_data?: Json | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          new_data?: Json | null
+          old_data?: Json | null
+          user_agent?: string | null
           user_id?: string
         }
         Relationships: []
@@ -209,6 +275,63 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      kyc_documents: {
+        Row: {
+          created_at: string
+          document_authenticity_score: number | null
+          extracted_data: Json | null
+          face_match_score: number | null
+          id: string
+          liveness_score: number | null
+          passport_back_url: string | null
+          passport_front_url: string | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          selfie_url: string | null
+          status: Database["public"]["Enums"]["kyc_status"]
+          updated_at: string
+          user_id: string
+          video_selfie_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          document_authenticity_score?: number | null
+          extracted_data?: Json | null
+          face_match_score?: number | null
+          id?: string
+          liveness_score?: number | null
+          passport_back_url?: string | null
+          passport_front_url?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          selfie_url?: string | null
+          status?: Database["public"]["Enums"]["kyc_status"]
+          updated_at?: string
+          user_id: string
+          video_selfie_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          document_authenticity_score?: number | null
+          extracted_data?: Json | null
+          face_match_score?: number | null
+          id?: string
+          liveness_score?: number | null
+          passport_back_url?: string | null
+          passport_front_url?: string | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          selfie_url?: string | null
+          status?: Database["public"]["Enums"]["kyc_status"]
+          updated_at?: string
+          user_id?: string
+          video_selfie_url?: string | null
+        }
+        Relationships: []
       }
       loyalty_points: {
         Row: {
@@ -710,6 +833,66 @@ export type Database = {
         }
         Relationships: []
       }
+      registration_requests: {
+        Row: {
+          business_type: string | null
+          company_name: string | null
+          country: string | null
+          created_at: string
+          email_verification_token: string | null
+          email_verified: boolean | null
+          email_verified_at: string | null
+          id: string
+          onboarding_step: number | null
+          privacy_accepted: boolean | null
+          rejection_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: Database["public"]["Enums"]["registration_status"]
+          terms_accepted: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          business_type?: string | null
+          company_name?: string | null
+          country?: string | null
+          created_at?: string
+          email_verification_token?: string | null
+          email_verified?: boolean | null
+          email_verified_at?: string | null
+          id?: string
+          onboarding_step?: number | null
+          privacy_accepted?: boolean | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["registration_status"]
+          terms_accepted?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          business_type?: string | null
+          company_name?: string | null
+          country?: string | null
+          created_at?: string
+          email_verification_token?: string | null
+          email_verified?: boolean | null
+          email_verified_at?: string | null
+          id?: string
+          onboarding_step?: number | null
+          privacy_accepted?: boolean | null
+          rejection_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: Database["public"]["Enums"]["registration_status"]
+          terms_accepted?: boolean | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       responses: {
         Row: {
           carrier_id: string
@@ -777,9 +960,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_admin_role: {
+        Args: { p_user_id: string }
+        Returns: Database["public"]["Enums"]["admin_role"]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_admin_permission: {
+        Args: { p_permission: string; p_user_id: string }
+        Returns: boolean
       }
       has_role: {
         Args: {
@@ -788,8 +979,22 @@ export type Database = {
         }
         Returns: boolean
       }
+      log_audit_event: {
+        Args: {
+          p_action: string
+          p_entity_id?: string
+          p_entity_type: string
+          p_ip_address?: string
+          p_new_data?: Json
+          p_old_data?: Json
+          p_user_agent?: string
+          p_user_id: string
+        }
+        Returns: string
+      }
     }
     Enums: {
+      admin_role: "super_admin" | "manager" | "operator" | "auditor"
       app_role: "client" | "carrier" | "admin"
       carrier_type: "driver" | "company"
       deal_status:
@@ -798,7 +1003,18 @@ export type Database = {
         | "in_transit"
         | "delivered"
         | "cancelled"
+      kyc_status:
+        | "not_started"
+        | "pending"
+        | "verified"
+        | "rejected"
+        | "manual_review"
       order_status: "open" | "in_progress" | "completed" | "cancelled"
+      registration_status:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "resubmission_required"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -926,6 +1142,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      admin_role: ["super_admin", "manager", "operator", "auditor"],
       app_role: ["client", "carrier", "admin"],
       carrier_type: ["driver", "company"],
       deal_status: [
@@ -935,7 +1152,20 @@ export const Constants = {
         "delivered",
         "cancelled",
       ],
+      kyc_status: [
+        "not_started",
+        "pending",
+        "verified",
+        "rejected",
+        "manual_review",
+      ],
       order_status: ["open", "in_progress", "completed", "cancelled"],
+      registration_status: [
+        "pending",
+        "approved",
+        "rejected",
+        "resubmission_required",
+      ],
     },
   },
 } as const

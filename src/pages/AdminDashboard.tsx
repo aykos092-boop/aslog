@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   Users, Truck, TrendingUp, ArrowLeft, 
-  Shield, Loader2, Tag, Bot, BarChart3, Activity, Package
+  Shield, Loader2, Tag, Bot, FileCheck, Clock, UserCheck
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -13,7 +13,12 @@ import { DealsTable } from "@/components/admin/DealsTable";
 import { AnalyticsCharts } from "@/components/admin/AnalyticsCharts";
 import { PromoCodesManager } from "@/components/admin/PromoCodesManager";
 import { AIChatAnalytics } from "@/components/admin/AIChatAnalytics";
+import { KYCDashboard } from "@/components/admin/KYCDashboard";
+import { AuditLogsTable } from "@/components/admin/AuditLogsTable";
+import { RegistrationRequestsTable } from "@/components/admin/RegistrationRequestsTable";
+import { AdminRolesManager } from "@/components/admin/AdminRolesManager";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
+import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -41,17 +46,11 @@ const AdminDashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b bg-card sticky top-0 z-10 backdrop-blur-lg bg-card/80">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => navigate("/dashboard")}
-                className="hover:scale-105 transition-transform"
-              >
+              <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
                 <ArrowLeft className="w-5 h-5" />
               </Button>
               <div className="flex items-center gap-3">
@@ -60,75 +59,68 @@ const AdminDashboard = () => {
                 </div>
                 <div>
                   <h1 className="text-xl font-bold">{t("admin.title")}</h1>
-                  <p className="text-xs text-muted-foreground">AsiaLog</p>
+                  <p className="text-xs text-muted-foreground">Enterprise Admin Panel</p>
                 </div>
               </div>
             </div>
-            <LanguageSwitcher />
+            <div className="flex items-center gap-2">
+              <ThemeSwitcher />
+              <LanguageSwitcher />
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Content */}
       <main className="container mx-auto px-4 py-6">
         <Tabs defaultValue="analytics" className="space-y-6">
-          <TabsList className="grid w-full max-w-3xl grid-cols-5 h-auto p-1 bg-muted/50">
-            <TabsTrigger 
-              value="analytics" 
-              className="flex items-center gap-2 py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
-            >
+          <TabsList className="flex flex-wrap h-auto gap-1 bg-muted/50 p-1 rounded-xl">
+            <TabsTrigger value="analytics" className="gap-2 py-2.5">
               <TrendingUp className="w-4 h-4" />
-              <span className="hidden sm:inline">{t("admin.analytics")}</span>
+              <span className="hidden sm:inline">Analytics</span>
             </TabsTrigger>
-            <TabsTrigger 
-              value="users" 
-              className="flex items-center gap-2 py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
-            >
+            <TabsTrigger value="users" className="gap-2 py-2.5">
               <Users className="w-4 h-4" />
-              <span className="hidden sm:inline">{t("admin.users")}</span>
+              <span className="hidden sm:inline">Users</span>
             </TabsTrigger>
-            <TabsTrigger 
-              value="deals" 
-              className="flex items-center gap-2 py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
-            >
+            <TabsTrigger value="deals" className="gap-2 py-2.5">
               <Truck className="w-4 h-4" />
-              <span className="hidden sm:inline">{t("admin.deals")}</span>
+              <span className="hidden sm:inline">Deals</span>
             </TabsTrigger>
-            <TabsTrigger 
-              value="promos" 
-              className="flex items-center gap-2 py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
-            >
+            <TabsTrigger value="registrations" className="gap-2 py-2.5">
+              <UserCheck className="w-4 h-4" />
+              <span className="hidden sm:inline">Registrations</span>
+            </TabsTrigger>
+            <TabsTrigger value="kyc" className="gap-2 py-2.5">
+              <FileCheck className="w-4 h-4" />
+              <span className="hidden sm:inline">KYC</span>
+            </TabsTrigger>
+            <TabsTrigger value="roles" className="gap-2 py-2.5">
+              <Shield className="w-4 h-4" />
+              <span className="hidden sm:inline">RBAC</span>
+            </TabsTrigger>
+            <TabsTrigger value="audit" className="gap-2 py-2.5">
+              <Clock className="w-4 h-4" />
+              <span className="hidden sm:inline">Audit</span>
+            </TabsTrigger>
+            <TabsTrigger value="promos" className="gap-2 py-2.5">
               <Tag className="w-4 h-4" />
-              <span className="hidden sm:inline">{t("admin.promos")}</span>
+              <span className="hidden sm:inline">Promos</span>
             </TabsTrigger>
-            <TabsTrigger 
-              value="ai" 
-              className="flex items-center gap-2 py-3 data-[state=active]:bg-background data-[state=active]:shadow-sm transition-all"
-            >
+            <TabsTrigger value="ai" className="gap-2 py-2.5">
               <Bot className="w-4 h-4" />
-              <span className="hidden sm:inline">{t("admin.aiChat")}</span>
+              <span className="hidden sm:inline">AI</span>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="analytics" className="animate-fade-in">
-            <AnalyticsCharts />
-          </TabsContent>
-
-          <TabsContent value="users" className="animate-fade-in">
-            <UsersTable />
-          </TabsContent>
-
-          <TabsContent value="deals" className="animate-fade-in">
-            <DealsTable />
-          </TabsContent>
-
-          <TabsContent value="promos" className="animate-fade-in">
-            <PromoCodesManager />
-          </TabsContent>
-
-          <TabsContent value="ai" className="animate-fade-in">
-            <AIChatAnalytics />
-          </TabsContent>
+          <TabsContent value="analytics"><AnalyticsCharts /></TabsContent>
+          <TabsContent value="users"><UsersTable /></TabsContent>
+          <TabsContent value="deals"><DealsTable /></TabsContent>
+          <TabsContent value="registrations"><RegistrationRequestsTable /></TabsContent>
+          <TabsContent value="kyc"><KYCDashboard /></TabsContent>
+          <TabsContent value="roles"><AdminRolesManager /></TabsContent>
+          <TabsContent value="audit"><AuditLogsTable /></TabsContent>
+          <TabsContent value="promos"><PromoCodesManager /></TabsContent>
+          <TabsContent value="ai"><AIChatAnalytics /></TabsContent>
         </Tabs>
       </main>
     </div>

@@ -1,0 +1,197 @@
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/contexts/LanguageContext";
+import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
+import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
+import { NotificationCenter } from "@/components/notifications/NotificationCenter";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Menu,
+  X,
+  LayoutDashboard,
+  Package,
+  Truck,
+  Star,
+  Users,
+  Settings,
+  LogOut,
+  Shield,
+  MessageSquare,
+  Calculator,
+  Heart,
+  User,
+  BarChart3,
+  FileText,
+  Home,
+} from "lucide-react";
+
+interface NavItem {
+  title: string;
+  icon: React.ElementType;
+  href: string;
+}
+
+const clientNavItems: NavItem[] = [
+  { title: "nav.dashboard", icon: LayoutDashboard, href: "/dashboard" },
+  { title: "orders.myOrders", icon: Package, href: "/dashboard#orders" },
+  { title: "deals.myDeals", icon: FileText, href: "/dashboard#deals" },
+  { title: "favorites.title", icon: Heart, href: "/dashboard#favorites" },
+  { title: "calculator.title", icon: Calculator, href: "/dashboard#calculator" },
+];
+
+const carrierNavItems: NavItem[] = [
+  { title: "nav.dashboard", icon: LayoutDashboard, href: "/dashboard" },
+  { title: "orders.available", icon: Truck, href: "/dashboard#available" },
+  { title: "carrier.myResponses", icon: MessageSquare, href: "/dashboard#responses" },
+  { title: "deals.myDeals", icon: FileText, href: "/dashboard#deals" },
+  { title: "carrier.achievements", icon: Star, href: "/dashboard#achievements" },
+];
+
+const adminNavItems: NavItem[] = [
+  { title: "nav.dashboard", icon: LayoutDashboard, href: "/dashboard" },
+  { title: "admin.users", icon: Users, href: "/admin#users" },
+  { title: "admin.deals", icon: FileText, href: "/admin#deals" },
+  { title: "admin.analytics", icon: BarChart3, href: "/admin#analytics" },
+];
+
+export const MobileHeader = () => {
+  const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+  const { user, role, signOut } = useAuth();
+  const { t } = useLanguage();
+
+  const navItems = role === "admin" ? adminNavItems : role === "carrier" ? carrierNavItems : clientNavItems;
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+    setOpen(false);
+  };
+
+  const handleNavigation = (href: string) => {
+    navigate(href);
+    setOpen(false);
+  };
+
+  const getRoleColor = () => {
+    switch (role) {
+      case "client": return "bg-customer/10 text-customer";
+      case "carrier": return "bg-driver/10 text-driver";
+      case "admin": return "bg-admin/10 text-admin";
+      default: return "bg-primary/10 text-primary";
+    }
+  };
+
+  const getRoleLabel = () => {
+    switch (role) {
+      case "client": return t("role.client") || "Client";
+      case "carrier": return t("role.carrier") || "Carrier";
+      case "admin": return t("role.admin") || "Admin";
+      default: return "";
+    }
+  };
+
+  return (
+    <header className="lg:hidden sticky top-0 z-50 h-16 border-b border-border bg-background/95 backdrop-blur-sm flex items-center justify-between px-4">
+      {/* Logo */}
+      <Link to="/" className="flex items-center gap-2">
+        <div className="w-9 h-9 gradient-hero rounded-xl flex items-center justify-center">
+          <Truck className="w-5 h-5 text-white" />
+        </div>
+        <span className="text-lg font-bold tracking-tight">
+          Asia<span className="text-primary">Log</span>
+        </span>
+      </Link>
+
+      {/* Right Actions */}
+      <div className="flex items-center gap-2">
+        <NotificationCenter />
+        
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-10 w-10">
+              <Menu className="w-5 h-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="right" className="w-[300px] p-0">
+            <SheetHeader className="p-4 border-b border-border">
+              <SheetTitle className="flex items-center gap-3">
+                <Avatar className="w-10 h-10">
+                  <AvatarFallback className={cn("text-sm font-medium", getRoleColor())}>
+                    {user?.email?.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 text-left">
+                  <p className="text-sm font-medium truncate">
+                    {user?.email?.split("@")[0]}
+                  </p>
+                  <p className="text-xs text-muted-foreground capitalize">
+                    {getRoleLabel()}
+                  </p>
+                </div>
+              </SheetTitle>
+            </SheetHeader>
+
+            {/* Navigation */}
+            <nav className="p-4 space-y-1">
+              {navItems.map((item) => (
+                <button
+                  key={item.href}
+                  onClick={() => handleNavigation(item.href)}
+                  className="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-left hover:bg-accent transition-colors"
+                >
+                  <item.icon className="w-5 h-5 text-muted-foreground" />
+                  <span className="text-sm font-medium">{t(item.title)}</span>
+                </button>
+              ))}
+            </nav>
+
+            {/* Divider */}
+            <div className="px-4">
+              <div className="h-px bg-border" />
+            </div>
+
+            {/* Settings Section */}
+            <div className="p-4 space-y-1">
+              <button
+                onClick={() => handleNavigation("/profile")}
+                className="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-left hover:bg-accent transition-colors"
+              >
+                <Settings className="w-5 h-5 text-muted-foreground" />
+                <span className="text-sm font-medium">{t("nav.profile") || "Profile"}</span>
+              </button>
+            </div>
+
+            {/* Theme & Language */}
+            <div className="px-4 py-2">
+              <div className="flex items-center justify-between px-3 py-2">
+                <span className="text-sm text-muted-foreground">{t("settings.theme") || "Theme"}</span>
+                <ThemeSwitcher />
+              </div>
+              <div className="flex items-center justify-between px-3 py-2">
+                <span className="text-sm text-muted-foreground">{t("settings.language") || "Language"}</span>
+                <LanguageSwitcher />
+              </div>
+            </div>
+
+            {/* Logout */}
+            <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border bg-background">
+              <Button
+                variant="ghost"
+                className="w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={handleSignOut}
+              >
+                <LogOut className="w-5 h-5" />
+                <span>{t("auth.logout") || "Logout"}</span>
+              </Button>
+            </div>
+          </SheetContent>
+        </Sheet>
+      </div>
+    </header>
+  );
+};

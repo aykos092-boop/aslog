@@ -2,9 +2,11 @@ import { ReactNode } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { AppSidebar } from "./AppSidebar";
 import { TopBar } from "./TopBar";
+import { MobileHeader } from "./MobileHeader";
 import { AIChatBot } from "@/components/ai/AIChatBot";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -24,6 +26,7 @@ export const DashboardLayout = ({
   fullWidth = false,
 }: DashboardLayoutProps) => {
   const { loading } = useAuth();
+  const isMobile = useIsMobile();
 
   if (loading) {
     return (
@@ -38,22 +41,30 @@ export const DashboardLayout = ({
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Sidebar */}
-      <AppSidebar />
+      {/* Mobile Header with Burger Menu */}
+      <MobileHeader />
+
+      {/* Desktop Sidebar */}
+      <div className="hidden lg:block">
+        <AppSidebar />
+      </div>
 
       {/* Main Content */}
-      <div className="pl-[72px] lg:pl-64 transition-all duration-300">
-        <TopBar
-          title={title}
-          subtitle={subtitle}
-          breadcrumbs={breadcrumbs}
-          actions={actions}
-        />
+      <div className="lg:pl-64 transition-all duration-300">
+        {/* Desktop TopBar */}
+        <div className="hidden lg:block">
+          <TopBar
+            title={title}
+            subtitle={subtitle}
+            breadcrumbs={breadcrumbs}
+            actions={actions}
+          />
+        </div>
 
         <main
           className={cn(
             "min-h-[calc(100vh-4rem)]",
-            !fullWidth && "container py-6"
+            !fullWidth && "container py-4 md:py-6 px-4"
           )}
         >
           {children}
