@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -11,7 +11,6 @@ import { NotificationCenter } from "@/components/notifications/NotificationCente
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import {
   Menu,
-  X,
   LayoutDashboard,
   Package,
   Truck,
@@ -19,14 +18,11 @@ import {
   Users,
   Settings,
   LogOut,
-  Shield,
   MessageSquare,
-  Calculator,
   Heart,
-  User,
   BarChart3,
   FileText,
-  Home,
+  Navigation,
 } from "lucide-react";
 
 interface NavItem {
@@ -40,7 +36,6 @@ const clientNavItems: NavItem[] = [
   { title: "orders.myOrders", icon: Package, href: "/dashboard#orders" },
   { title: "deals.myDeals", icon: FileText, href: "/dashboard#deals" },
   { title: "favorites.title", icon: Heart, href: "/dashboard#favorites" },
-  { title: "calculator.title", icon: Calculator, href: "/dashboard#calculator" },
 ];
 
 const carrierNavItems: NavItem[] = [
@@ -48,6 +43,7 @@ const carrierNavItems: NavItem[] = [
   { title: "orders.available", icon: Truck, href: "/dashboard#available" },
   { title: "carrier.myResponses", icon: MessageSquare, href: "/dashboard#responses" },
   { title: "deals.myDeals", icon: FileText, href: "/dashboard#deals" },
+  { title: "carrier.navigation", icon: Navigation, href: "/dashboard#navigation" },
   { title: "carrier.achievements", icon: Star, href: "/dashboard#achievements" },
 ];
 
@@ -61,6 +57,7 @@ const adminNavItems: NavItem[] = [
 export const MobileHeader = () => {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, role, signOut } = useAuth();
   const { t } = useLanguage();
 
@@ -77,6 +74,13 @@ export const MobileHeader = () => {
     setOpen(false);
   };
 
+  const isActive = (href: string) => {
+    if (href.includes('#')) {
+      return location.pathname + location.hash === href;
+    }
+    return location.pathname === href && !location.hash;
+  };
+
   const getRoleColor = () => {
     switch (role) {
       case "client": return "bg-customer/10 text-customer";
@@ -88,37 +92,37 @@ export const MobileHeader = () => {
 
   const getRoleLabel = () => {
     switch (role) {
-      case "client": return t("role.client") || "Client";
-      case "carrier": return t("role.carrier") || "Carrier";
-      case "admin": return t("role.admin") || "Admin";
+      case "client": return t("role.client") || "Клиент";
+      case "carrier": return t("role.carrier") || "Перевозчик";
+      case "admin": return t("role.admin") || "Админ";
       default: return "";
     }
   };
 
   return (
-    <header className="lg:hidden sticky top-0 z-50 h-16 border-b border-border bg-background/95 backdrop-blur-sm flex items-center justify-between px-4">
+    <header className="lg:hidden sticky top-0 z-50 h-14 border-b border-border bg-background/95 backdrop-blur-sm flex items-center justify-between px-4">
       {/* Logo */}
       <Link to="/" className="flex items-center gap-2">
-        <div className="w-9 h-9 gradient-hero rounded-xl flex items-center justify-center">
-          <Truck className="w-5 h-5 text-white" />
+        <div className="w-8 h-8 gradient-hero rounded-xl flex items-center justify-center">
+          <Truck className="w-4 h-4 text-white" />
         </div>
-        <span className="text-lg font-bold tracking-tight">
+        <span className="text-base font-bold tracking-tight">
           Asia<span className="text-primary">Log</span>
         </span>
       </Link>
 
       {/* Right Actions */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1">
         <NotificationCenter />
         
         <Sheet open={open} onOpenChange={setOpen}>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-10 w-10">
+            <Button variant="ghost" size="icon" className="h-9 w-9">
               <Menu className="w-5 h-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-[300px] p-0">
-            <SheetHeader className="p-4 border-b border-border">
+          <SheetContent side="right" className="w-[280px] p-0 flex flex-col">
+            <SheetHeader className="p-4 border-b border-border shrink-0">
               <SheetTitle className="flex items-center gap-3">
                 <Avatar className="w-10 h-10">
                   <AvatarFallback className={cn("text-sm font-medium", getRoleColor())}>
@@ -137,56 +141,57 @@ export const MobileHeader = () => {
             </SheetHeader>
 
             {/* Navigation */}
-            <nav className="p-4 space-y-1">
-              {navItems.map((item) => (
-                <button
-                  key={item.href}
-                  onClick={() => handleNavigation(item.href)}
-                  className="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-left hover:bg-accent transition-colors"
-                >
-                  <item.icon className="w-5 h-5 text-muted-foreground" />
-                  <span className="text-sm font-medium">{t(item.title)}</span>
-                </button>
-              ))}
-            </nav>
+            <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
+              {navItems.map((item) => {
+                const active = isActive(item.href);
+                return (
+                  <button
+                    key={item.href}
+                    onClick={() => handleNavigation(item.href)}
+                    className={cn(
+                      "flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-left transition-colors",
+                      active ? "bg-primary/10 text-primary font-medium" : "hover:bg-accent"
+                    )}
+                  >
+                    <item.icon className={cn(
+                      "w-5 h-5",
+                      active ? "text-primary" : "text-muted-foreground"
+                    )} />
+                    <span className="text-sm">{t(item.title) || item.title}</span>
+                  </button>
+                );
+              })}
 
-            {/* Divider */}
-            <div className="px-4">
-              <div className="h-px bg-border" />
-            </div>
+              {/* Divider */}
+              <div className="h-px bg-border my-2" />
 
-            {/* Settings Section */}
-            <div className="p-4 space-y-1">
+              {/* Profile */}
               <button
                 onClick={() => handleNavigation("/profile")}
-                className="flex items-center gap-3 w-full px-3 py-3 rounded-xl text-left hover:bg-accent transition-colors"
+                className="flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-left hover:bg-accent transition-colors"
               >
                 <Settings className="w-5 h-5 text-muted-foreground" />
-                <span className="text-sm font-medium">{t("nav.profile") || "Profile"}</span>
+                <span className="text-sm">{t("nav.profile") || "Профиль"}</span>
               </button>
-            </div>
+            </nav>
 
-            {/* Theme & Language */}
-            <div className="px-4 py-2">
-              <div className="flex items-center justify-between px-3 py-2">
-                <span className="text-sm text-muted-foreground">{t("settings.theme") || "Theme"}</span>
+            {/* Theme & Language & Logout */}
+            <div className="border-t border-border p-3 space-y-2 shrink-0">
+              <div className="flex items-center justify-between px-2 py-1">
+                <span className="text-xs text-muted-foreground">{t("settings.theme") || "Тема"}</span>
                 <ThemeSwitcher />
               </div>
-              <div className="flex items-center justify-between px-3 py-2">
-                <span className="text-sm text-muted-foreground">{t("settings.language") || "Language"}</span>
+              <div className="flex items-center justify-between px-2 py-1">
+                <span className="text-xs text-muted-foreground">{t("settings.language") || "Язык"}</span>
                 <LanguageSwitcher />
               </div>
-            </div>
-
-            {/* Logout */}
-            <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-border bg-background">
               <Button
                 variant="ghost"
                 className="w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10"
                 onClick={handleSignOut}
               >
-                <LogOut className="w-5 h-5" />
-                <span>{t("auth.logout") || "Logout"}</span>
+                <LogOut className="w-4 h-4" />
+                <span className="text-sm">{t("auth.logout") || "Выйти"}</span>
               </Button>
             </div>
           </SheetContent>

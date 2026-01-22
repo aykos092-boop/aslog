@@ -4,7 +4,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   LayoutDashboard,
@@ -16,18 +15,17 @@ import {
   LogOut,
   Shield,
   MessageSquare,
-  Calculator,
   Heart,
   User,
   BarChart3,
   FileText,
+  Navigation,
 } from "lucide-react";
 
 interface NavItem {
   title: string;
   icon: React.ElementType;
   href: string;
-  badge?: string | number;
 }
 
 const clientNavItems: NavItem[] = [
@@ -35,7 +33,6 @@ const clientNavItems: NavItem[] = [
   { title: "orders.myOrders", icon: Package, href: "/dashboard#orders" },
   { title: "deals.myDeals", icon: FileText, href: "/dashboard#deals" },
   { title: "favorites.title", icon: Heart, href: "/dashboard#favorites" },
-  { title: "calculator.title", icon: Calculator, href: "/dashboard#calculator" },
 ];
 
 const carrierNavItems: NavItem[] = [
@@ -43,6 +40,7 @@ const carrierNavItems: NavItem[] = [
   { title: "orders.available", icon: Truck, href: "/dashboard#available" },
   { title: "carrier.myResponses", icon: MessageSquare, href: "/dashboard#responses" },
   { title: "deals.myDeals", icon: FileText, href: "/dashboard#deals" },
+  { title: "carrier.navigation", icon: Navigation, href: "/dashboard#navigation" },
   { title: "carrier.achievements", icon: Star, href: "/dashboard#achievements" },
 ];
 
@@ -91,6 +89,11 @@ export const AppSidebar = () => {
     return location.pathname === href && !location.hash;
   };
 
+  const handleNavClick = (href: string) => {
+    // Navigate to the hash route
+    navigate(href);
+  };
+
   return (
     <TooltipProvider>
       <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
@@ -111,11 +114,11 @@ export const AppSidebar = () => {
           {navItems.map((item) => {
             const active = isActive(item.href);
             return (
-              <Link
+              <button
                 key={item.href}
-                to={item.href}
+                onClick={() => handleNavClick(item.href)}
                 className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200",
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-left",
                   "hover:bg-accent group relative",
                   active && "bg-primary/10 text-primary font-medium",
                   !active && "text-muted-foreground hover:text-foreground"
@@ -126,16 +129,11 @@ export const AppSidebar = () => {
                   active && "text-primary",
                   !active && "text-muted-foreground group-hover:text-foreground"
                 )} />
-                <span className="text-sm truncate">{t(item.title)}</span>
-                {item.badge && (
-                  <Badge variant="secondary" className="ml-auto text-xs">
-                    {item.badge}
-                  </Badge>
-                )}
+                <span className="text-sm truncate">{t(item.title) || item.title}</span>
                 {active && (
                   <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-full" />
                 )}
-              </Link>
+              </button>
             );
           })}
         </nav>
@@ -156,7 +154,7 @@ export const AppSidebar = () => {
               <div className="flex items-center gap-1.5 mt-0.5">
                 {getRoleIcon()}
                 <span className="text-xs text-muted-foreground capitalize">
-                  {t(`role.${role}`)}
+                  {t(`role.${role}`) || role}
                 </span>
               </div>
             </div>
@@ -176,7 +174,7 @@ export const AppSidebar = () => {
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="top">
-                {t("nav.profile")}
+                {t("nav.profile") || "Профиль"}
               </TooltipContent>
             </Tooltip>
 
@@ -192,7 +190,7 @@ export const AppSidebar = () => {
                 </Button>
               </TooltipTrigger>
               <TooltipContent side="top">
-                {t("auth.logout")}
+                {t("auth.logout") || "Выйти"}
               </TooltipContent>
             </Tooltip>
           </div>
