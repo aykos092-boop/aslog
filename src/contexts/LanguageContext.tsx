@@ -122,6 +122,15 @@ const translations: Record<Language, Record<string, string>> = {
     "carrier.respond": "Откликнуться",
     "carrier.responded": "Вы откликнулись",
     "carrier.viewDetails": "Подробнее",
+    "carrier.navigation": "Навигация",
+    "carrier.myResponses": "Мои отклики",
+    
+    // Stats
+    "stats.noRating": "Нет отзывов",
+    "stats.excellent": "Отлично",
+    "stats.good": "Хорошо",
+    "stats.average": "Средне",
+    "stats.poor": "Плохо",
     
     // Levels
     "level.beginner": "Новичок",
