@@ -1,32 +1,92 @@
 import { useCallback, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface VoiceNavigationOptions {
   enabled?: boolean;
   language?: string;
 }
 
+// Constants for rate limiting and circuit breaker
+const MAX_QUEUE_SIZE = 3;
+const PHRASE_COOLDOWN_MS = 15000; // 15 seconds between identical phrases
+const MAX_CONSECUTIVE_ERRORS = 2;
+const DISABLE_DURATION_MS = 60000; // 1 minute pause after errors
+
 export const useVoiceNavigation = (options: VoiceNavigationOptions = {}) => {
   const { enabled = true, language = "ru" } = options;
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isTemporarilyDisabled, setIsTemporarilyDisabled] = useState(false);
+  const { toast } = useToast();
+  
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const queueRef = useRef<string[]>([]);
   const isPlayingRef = useRef(false);
+  const recentPhrasesRef = useRef<Map<string, number>>(new Map());
+  const consecutiveErrorsRef = useRef<number>(0);
+  const ttsDisabledUntilRef = useRef<number>(0);
+  const toastShownRef = useRef(false);
+
+  // Check if phrase was recently spoken (deduplication)
+  const isDuplicatePhrase = useCallback((text: string): boolean => {
+    const now = Date.now();
+    
+    // Clean old entries
+    for (const [phrase, timestamp] of recentPhrasesRef.current) {
+      if (now - timestamp > PHRASE_COOLDOWN_MS) {
+        recentPhrasesRef.current.delete(phrase);
+      }
+    }
+    
+    const lastSpoken = recentPhrasesRef.current.get(text);
+    if (lastSpoken && now - lastSpoken < PHRASE_COOLDOWN_MS) {
+      return true;
+    }
+    
+    recentPhrasesRef.current.set(text, now);
+    return false;
+  }, []);
 
   const speak = useCallback(async (text: string) => {
     if (!enabled || !text) return;
 
-    // Add to queue
+    // Check if TTS is temporarily disabled after errors
+    const now = Date.now();
+    if (now < ttsDisabledUntilRef.current) {
+      return;
+    }
+    
+    // Re-enable if cooldown passed
+    if (isTemporarilyDisabled && now >= ttsDisabledUntilRef.current) {
+      setIsTemporarilyDisabled(false);
+      consecutiveErrorsRef.current = 0;
+      toastShownRef.current = false;
+    }
+
+    // Deduplication - skip if same phrase was spoken recently
+    if (isDuplicatePhrase(text)) {
+      return;
+    }
+
+    // Queue size limit
+    if (queueRef.current.length >= MAX_QUEUE_SIZE) {
+      return;
+    }
+
     queueRef.current.push(text);
     
-    // If already playing, the queue will be processed
     if (isPlayingRef.current) return;
 
     const processQueue = async () => {
       while (queueRef.current.length > 0) {
         const currentText = queueRef.current.shift();
         if (!currentText) continue;
+
+        // Double-check disabled state
+        if (Date.now() < ttsDisabledUntilRef.current) {
+          queueRef.current = [];
+          break;
+        }
 
         isPlayingRef.current = true;
         setIsLoading(true);
@@ -45,16 +105,44 @@ export const useVoiceNavigation = (options: VoiceNavigationOptions = {}) => {
             }
           );
 
+          // Graceful handling for 401/429/5xx - don't crash the app
           if (!response.ok) {
-            throw new Error(`TTS request failed: ${response.status}`);
+            const status = response.status;
+            consecutiveErrorsRef.current++;
+
+            if (status === 401 || status === 429 || status >= 500) {
+              // Expected provider errors - handle gracefully
+              if (consecutiveErrorsRef.current >= MAX_CONSECUTIVE_ERRORS) {
+                ttsDisabledUntilRef.current = Date.now() + DISABLE_DURATION_MS;
+                queueRef.current = [];
+                setIsTemporarilyDisabled(true);
+
+                // Show toast only once
+                if (!toastShownRef.current) {
+                  toastShownRef.current = true;
+                  toast({
+                    title: "Голос временно недоступен",
+                    description: "Навигация продолжается без озвучки",
+                  });
+                }
+              }
+              
+              setIsLoading(false);
+              continue; // Skip to next phrase
+            }
+            
+            setIsLoading(false);
+            continue;
           }
+
+          // Success - reset error counter
+          consecutiveErrorsRef.current = 0;
 
           const data = await response.json();
           
           if (data.audioContent) {
             const audioUrl = `data:audio/mpeg;base64,${data.audioContent}`;
             
-            // Stop previous audio if playing
             if (audioRef.current) {
               audioRef.current.pause();
               audioRef.current = null;
@@ -80,9 +168,25 @@ export const useVoiceNavigation = (options: VoiceNavigationOptions = {}) => {
                 resolve();
               });
             });
+          } else {
+            setIsLoading(false);
           }
         } catch (error) {
-          console.error("Voice navigation error:", error);
+          // Network errors - handle gracefully
+          consecutiveErrorsRef.current++;
+          
+          if (consecutiveErrorsRef.current >= MAX_CONSECUTIVE_ERRORS && !toastShownRef.current) {
+            ttsDisabledUntilRef.current = Date.now() + DISABLE_DURATION_MS;
+            queueRef.current = [];
+            setIsTemporarilyDisabled(true);
+            toastShownRef.current = true;
+            
+            toast({
+              title: "Голос временно недоступен",
+              description: "Навигация продолжается без озвучки",
+            });
+          }
+          
           setIsLoading(false);
           setIsSpeaking(false);
         }
@@ -92,7 +196,7 @@ export const useVoiceNavigation = (options: VoiceNavigationOptions = {}) => {
     };
 
     processQueue();
-  }, [enabled, language]);
+  }, [enabled, language, isDuplicatePhrase, isTemporarilyDisabled, toast]);
 
   const stop = useCallback(() => {
     queueRef.current = [];
@@ -129,5 +233,6 @@ export const useVoiceNavigation = (options: VoiceNavigationOptions = {}) => {
     stop,
     isSpeaking,
     isLoading,
+    isTemporarilyDisabled,
   };
 };
