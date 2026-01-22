@@ -241,6 +241,42 @@ export type Database = {
         }
         Relationships: []
       }
+      geocode_cache: {
+        Row: {
+          address: string
+          address_normalized: string
+          created_at: string
+          formatted_address: string | null
+          id: string
+          lat: number
+          lng: number
+          provider: string | null
+          updated_at: string
+        }
+        Insert: {
+          address: string
+          address_normalized: string
+          created_at?: string
+          formatted_address?: string | null
+          id?: string
+          lat: number
+          lng: number
+          provider?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string
+          address_normalized?: string
+          created_at?: string
+          formatted_address?: string | null
+          id?: string
+          lat?: number
+          lng?: number
+          provider?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       gps_locations: {
         Row: {
           carrier_id: string
