@@ -207,21 +207,17 @@ export const GoogleNavigator = ({
         attributionControl: false,
       }).setView([41.3, 64.5], 10);
 
-      // Use Google-style tiles with traffic option
-      const tileUrl = showTraffic
-        ? "https://{s}.google.com/vt/lyrs=m,traffic&x={x}&y={y}&z={z}"
-        : "https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}";
-
-      L.tileLayer(tileUrl, {
-        maxZoom: 20,
-        subdomains: ["mt0", "mt1", "mt2", "mt3"],
+      // Use CartoDB tiles (free, reliable, no API key needed)
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+        maxZoom: 19,
+        subdomains: "abcd",
       }).addTo(mapRef.current);
 
       setLoading(false);
     }
   }, []);
 
-  // Toggle traffic layer
+  // Toggle traffic layer (visual indicator only - actual traffic data comes from route)
   useEffect(() => {
     if (!mapRef.current) return;
 
@@ -234,14 +230,14 @@ export const GoogleNavigator = ({
       }
     });
 
-    // Add new tile layer with or without traffic
+    // CartoDB Voyager (light) or Dark Matter based on traffic toggle for visual distinction
     const tileUrl = showTraffic
-      ? "https://{s}.google.com/vt/lyrs=m,traffic&x={x}&y={y}&z={z}"
-      : "https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}";
+      ? "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+      : "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png";
 
     L.tileLayer(tileUrl, {
-      maxZoom: 20,
-      subdomains: ["mt0", "mt1", "mt2", "mt3"],
+      maxZoom: 19,
+      subdomains: "abcd",
     }).addTo(map);
 
   }, [showTraffic]);
