@@ -15,6 +15,7 @@ import OrderChat from "./pages/OrderChat";
 import DealChat from "./pages/DealChat";
 import AdminDashboard from "./pages/AdminDashboard";
 import UserProfile from "./pages/UserProfile";
+import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,6 +32,7 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/register" element={<Register />} />
                 <Route path="/admin-login" element={<AdminLogin />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/orders/:orderId/responses" element={<OrderResponses />} />

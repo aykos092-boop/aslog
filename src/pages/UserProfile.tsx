@@ -19,7 +19,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProfileEditForm } from "@/components/profile/ProfileEditForm";
+import { KYCVerificationForm } from "@/components/kyc/KYCVerificationForm";
 
 interface Profile {
   id: string;
@@ -379,63 +381,139 @@ const UserProfile = () => {
           </Card>
         )}
 
-        {/* Reviews */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Quote className="w-5 h-5" />
-              Отзывы
-            </CardTitle>
-            <CardDescription>
-              {ratings.length > 0 ? `${ratings.length} отзывов` : "Пока нет отзывов"}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {ratings.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
-                <Star className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                <p>У пользователя пока нет отзывов</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {ratings.map((rating) => (
-                  <div key={rating.id} className="p-4 rounded-lg border bg-card">
-                    <div className="flex items-start gap-3">
-                      <Avatar className="w-10 h-10">
-                        <AvatarFallback>
-                          {rating.rater_profile?.full_name?.charAt(0) || "?"}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-medium">
-                            {rating.rater_profile?.full_name || "Пользователь"}
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {format(new Date(rating.created_at), "d MMMM yyyy", { locale: ru })}
-                          </span>
+        {/* KYC Section - Only for own profile */}
+        {isOwnProfile && (
+          <Tabs defaultValue="reviews" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
+              <TabsTrigger value="reviews">Отзывы</TabsTrigger>
+              <TabsTrigger value="kyc">Верификация</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="reviews">
+              {/* Reviews */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Quote className="w-5 h-5" />
+                    Отзывы
+                  </CardTitle>
+                  <CardDescription>
+                    {ratings.length > 0 ? `${ratings.length} отзывов` : "Пока нет отзывов"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {ratings.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Star className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                      <p>У пользователя пока нет отзывов</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {ratings.map((rating) => (
+                        <div key={rating.id} className="p-4 rounded-lg border bg-card">
+                          <div className="flex items-start gap-3">
+                            <Avatar className="w-10 h-10">
+                              <AvatarFallback>
+                                {rating.rater_profile?.full_name?.charAt(0) || "?"}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="font-medium">
+                                  {rating.rater_profile?.full_name || "Пользователь"}
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {format(new Date(rating.created_at), "d MMMM yyyy", { locale: ru })}
+                                </span>
+                              </div>
+                              <div className="flex gap-0.5 mb-2">
+                                {[1, 2, 3, 4, 5].map((s) => (
+                                  <Star
+                                    key={s}
+                                    className={`w-4 h-4 ${
+                                      s <= rating.score ? "fill-gold text-gold" : "text-muted-foreground"
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                              {rating.comment && (
+                                <p className="text-sm text-muted-foreground">{rating.comment}</p>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex gap-0.5 mb-2">
-                          {[1, 2, 3, 4, 5].map((s) => (
-                            <Star
-                              key={s}
-                              className={`w-4 h-4 ${
-                                s <= rating.score ? "fill-gold text-gold" : "text-muted-foreground"
-                              }`}
-                            />
-                          ))}
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="kyc">
+              <KYCVerificationForm />
+            </TabsContent>
+          </Tabs>
+        )}
+
+        {/* Reviews for other profiles */}
+        {!isOwnProfile && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Quote className="w-5 h-5" />
+                Отзывы
+              </CardTitle>
+              <CardDescription>
+                {ratings.length > 0 ? `${ratings.length} отзывов` : "Пока нет отзывов"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {ratings.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Star className="w-12 h-12 mx-auto mb-4 opacity-30" />
+                  <p>У пользователя пока нет отзывов</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {ratings.map((rating) => (
+                    <div key={rating.id} className="p-4 rounded-lg border bg-card">
+                      <div className="flex items-start gap-3">
+                        <Avatar className="w-10 h-10">
+                          <AvatarFallback>
+                            {rating.rater_profile?.full_name?.charAt(0) || "?"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-medium">
+                              {rating.rater_profile?.full_name || "Пользователь"}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(rating.created_at), "d MMMM yyyy", { locale: ru })}
+                            </span>
+                          </div>
+                          <div className="flex gap-0.5 mb-2">
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <Star
+                                key={s}
+                                className={`w-4 h-4 ${
+                                  s <= rating.score ? "fill-gold text-gold" : "text-muted-foreground"
+                                }`}
+                              />
+                            ))}
+                          </div>
+                          {rating.comment && (
+                            <p className="text-sm text-muted-foreground">{rating.comment}</p>
+                          )}
                         </div>
-                        {rating.comment && (
-                          <p className="text-sm text-muted-foreground">{rating.comment}</p>
-                        )}
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </main>
     </div>
   );

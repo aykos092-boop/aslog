@@ -393,6 +393,13 @@ const Auth = () => {
                       `Зарегистрироваться как ${signupRole === "client" ? "Клиент" : "Перевозчик"}`
                     )}
                   </Button>
+
+                  <div className="text-center">
+                    <span className="text-sm text-muted-foreground">или </span>
+                    <a href="/register" className="text-sm text-primary hover:underline">
+                      пройти полную регистрацию →
+                    </a>
+                  </div>
                 </form>
               </TabsContent>
             </Tabs>
