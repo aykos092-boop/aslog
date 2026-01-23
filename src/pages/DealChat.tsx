@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { 
   ArrowLeft, Package, MapPin, MessageSquare, Loader2, 
-  Truck, CheckCircle, Navigation, Flag, Star, XCircle, Banknote
+  Truck, CheckCircle, Navigation, Flag, Star, XCircle, Banknote, Maximize2
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -371,15 +371,25 @@ const DealChat = () => {
                   </Button>
                 )}
                 {deal.status === "in_transit" && (
-                  <Button
-                    size="sm"
-                    variant="driver"
-                    onClick={() => updateDealStatus("delivered", "Груз доставлен!")}
-                    disabled={updatingStatus}
-                  >
-                    <Flag className="w-4 h-4 mr-1" />
-                    Завершить доставку
-                  </Button>
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate(`/navigate/${dealId}`)}
+                    >
+                      <Maximize2 className="w-4 h-4 mr-1" />
+                      Полная навигация
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="driver"
+                      onClick={() => updateDealStatus("delivered", "Груз доставлен!")}
+                      disabled={updatingStatus}
+                    >
+                      <Flag className="w-4 h-4 mr-1" />
+                      Завершить доставку
+                    </Button>
+                  </>
                 )}
               </div>
             )}

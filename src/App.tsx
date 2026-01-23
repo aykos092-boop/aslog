@@ -17,6 +17,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import UserProfile from "./pages/UserProfile";
 import Register from "./pages/Register";
 import ApiDocs from "./pages/ApiDocs";
+import NavigationPage from "./pages/NavigationPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
                 <Route path="/orders/:orderId/responses" element={<OrderResponses />} />
                 <Route path="/orders/:orderId/chat/:carrierId" element={<OrderChat />} />
                 <Route path="/deals/:dealId/chat" element={<DealChat />} />
+                <Route path="/navigate/:dealId" element={<NavigationPage />} />
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/profile" element={<UserProfile />} />
                 <Route path="/profile/:userId" element={<UserProfile />} />
