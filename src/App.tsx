@@ -18,6 +18,7 @@ import UserProfile from "./pages/UserProfile";
 import Register from "./pages/Register";
 import ApiDocs from "./pages/ApiDocs";
 import NavigationPage from "./pages/NavigationPage";
+import Navigator from "./pages/Navigator";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +46,7 @@ const App = () => (
                 <Route path="/profile" element={<UserProfile />} />
                 <Route path="/profile/:userId" element={<UserProfile />} />
                 <Route path="/api-docs" element={<ApiDocs />} />
+                <Route path="/navigator" element={<Navigator />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
