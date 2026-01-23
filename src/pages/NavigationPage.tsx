@@ -5,14 +5,16 @@ import { useAuth } from "@/hooks/useAuth";
 import { FullScreenNavigator } from "@/components/navigation/FullScreenNavigator";
 import { Loader2 } from "lucide-react";
 
+interface OrderData {
+  pickup_address: string;
+  delivery_address: string;
+  cargo_type: string;
+}
+
 interface DealWithOrder {
   id: string;
   client_id: string;
-  order: {
-    pickup_address: string;
-    delivery_address: string;
-    cargo_type: string;
-  };
+  order: OrderData | null;
   client_profile?: {
     full_name: string | null;
     phone: string | null;
@@ -56,6 +58,15 @@ const NavigationPage = () => {
           return;
         }
 
+        // Handle order - it might be an array from Supabase join
+        const orderData = Array.isArray(data.order) ? data.order[0] : data.order;
+        
+        if (!orderData) {
+          setError("Заказ не найден");
+          setLoading(false);
+          return;
+        }
+
         // Fetch client profile
         const { data: profile } = await supabase
           .from("profiles")
@@ -64,7 +75,9 @@ const NavigationPage = () => {
           .single();
 
         setDeal({
-          ...data,
+          id: data.id,
+          client_id: data.client_id,
+          order: orderData,
           client_profile: profile || undefined,
         });
       } catch (err: unknown) {
@@ -93,7 +106,7 @@ const NavigationPage = () => {
     );
   }
 
-  if (error || !deal) {
+  if (error || !deal || !deal.order) {
     return (
       <div className="fixed inset-0 flex items-center justify-center bg-background">
         <div className="text-center space-y-4 p-6">
