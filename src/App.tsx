@@ -3,23 +3,24 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AuthProvider } from "@/hooks/useAuth";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { ThemeProvider } from "@/hooks/useTheme";
+import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
-import AdminLogin from "./pages/AdminLogin";
+import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import OrderResponses from "./pages/OrderResponses";
 import OrderChat from "./pages/OrderChat";
 import DealChat from "./pages/DealChat";
-import AdminDashboard from "./pages/AdminDashboard";
 import UserProfile from "./pages/UserProfile";
-import Register from "./pages/Register";
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminLogin from "./pages/AdminLogin";
 import ApiDocs from "./pages/ApiDocs";
+import NotFound from "./pages/NotFound";
 import NavigationPage from "./pages/NavigationPage";
 import Navigator from "./pages/Navigator";
-import NotFound from "./pages/NotFound";
+import FreeNavigator from "./pages/FreeNavigator";
 
 const queryClient = new QueryClient();
 
@@ -47,6 +48,7 @@ const App = () => (
                 <Route path="/profile/:userId" element={<UserProfile />} />
                 <Route path="/api-docs" element={<ApiDocs />} />
                 <Route path="/navigator" element={<Navigator />} />
+                <Route path="/free-navigator" element={<FreeNavigator />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
