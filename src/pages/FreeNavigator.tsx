@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { AddressAutocomplete } from "@/components/navigation/AddressAutocomplete";
 import { useVoiceNavigation } from "@/hooks/useVoiceNavigation";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { 
@@ -55,24 +55,6 @@ const OSRM_PROFILES: Record<TravelMode, string> = {
   driving: "car",
   walking: "foot",
   cycling: "bike"
-};
-
-// Nominatim geocoding (free, no API key)
-const geocodeAddress = async (address: string): Promise<Coords | null> => {
-  try {
-    const response = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`,
-      { headers: { "Accept-Language": "ru,en" } }
-    );
-    const data = await response.json();
-    if (data.length > 0) {
-      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
-    }
-    return null;
-  } catch (error) {
-    console.error("Geocoding error:", error);
-    return null;
-  }
 };
 
 // OSRM routing (free public API)
@@ -188,8 +170,27 @@ const maneuverIcons: Record<string, string> = {
   "continue": "↑",
 };
 
+// Geocode address using Nominatim
+const geocodeAddress = async (address: string): Promise<Coords | null> => {
+  try {
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`,
+      { headers: { "Accept-Language": "ru,en" } }
+    );
+    const data = await response.json();
+    if (data.length > 0) {
+      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    }
+    return null;
+  } catch (error) {
+    console.error("Geocoding error:", error);
+    return null;
+  }
+};
+
 export default function FreeNavigator() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { language } = useLanguage();
   
   // Form state
@@ -213,6 +214,7 @@ export default function FreeNavigator() {
   const [error, setError] = useState<string | null>(null);
   const [panelExpanded, setPanelExpanded] = useState(true);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [autoRouteBuilt, setAutoRouteBuilt] = useState(false);
   
   // Refs
   const mapRef = useRef<L.Map | null>(null);
@@ -253,6 +255,29 @@ export default function FreeNavigator() {
     };
   }, []);
 
+  // Auto-fill from URL params (order data)
+  useEffect(() => {
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
+    
+    if (from) setOriginInput(decodeURIComponent(from));
+    if (to) setDestinationInput(decodeURIComponent(to));
+  }, [searchParams]);
+
+  // Auto-build route when both addresses are from URL params
+  useEffect(() => {
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
+    
+    if (from && to && !autoRouteBuilt && originInput && destinationInput) {
+      setAutoRouteBuilt(true);
+      // Small delay to ensure map is ready
+      setTimeout(() => {
+        buildRoute();
+      }, 500);
+    }
+  }, [searchParams, originInput, destinationInput, autoRouteBuilt]);
+
   // Build route
   const buildRoute = useCallback(async () => {
     if (!originInput.trim() || !destinationInput.trim()) {
@@ -264,11 +289,19 @@ export default function FreeNavigator() {
     setError(null);
     
     try {
-      // Geocode addresses
-      const [origin, destination] = await Promise.all([
-        geocodeAddress(originInput),
-        geocodeAddress(destinationInput)
-      ]);
+      // Use existing coords if available, otherwise geocode
+      let origin = originCoords;
+      let destination = destinationCoords;
+      
+      if (!origin) {
+        origin = await geocodeAddress(originInput);
+        if (origin) setOriginCoords(origin);
+      }
+      
+      if (!destination) {
+        destination = await geocodeAddress(destinationInput);
+        if (destination) setDestinationCoords(destination);
+      }
       
       if (!origin) {
         setError("Не удалось найти адрес отправления");
@@ -281,9 +314,6 @@ export default function FreeNavigator() {
         setLoading(false);
         return;
       }
-      
-      setOriginCoords(origin);
-      setDestinationCoords(destination);
       
       // Fetch route
       const routeData = await fetchRoute(origin, destination, mode);
@@ -303,7 +333,16 @@ export default function FreeNavigator() {
     } finally {
       setLoading(false);
     }
-  }, [originInput, destinationInput, mode]);
+  }, [originInput, destinationInput, mode, originCoords, destinationCoords]);
+
+  // Handle address selection from autocomplete
+  const handleOriginSelect = useCallback((address: string, coords: Coords) => {
+    setOriginCoords(coords);
+  }, []);
+
+  const handleDestinationSelect = useCallback((address: string, coords: Coords) => {
+    setDestinationCoords(coords);
+  }, []);
 
   // Draw route on map
   const drawRoute = useCallback((routeData: RouteData, origin: Coords, destination: Coords) => {
@@ -532,6 +571,7 @@ export default function FreeNavigator() {
     setDestinationCoords(null);
     setCurrentStepIndex(0);
     setError(null);
+    setAutoRouteBuilt(false);
     
     if (routeLayerRef.current && mapRef.current) {
       mapRef.current.removeLayer(routeLayerRef.current);
@@ -594,19 +634,18 @@ export default function FreeNavigator() {
 
         {panelExpanded && (
           <>
-            {/* Address inputs */}
+            {/* Address inputs with autocomplete */}
             <div className="p-4 space-y-3 border-b border-border">
               <div className="flex gap-2">
-                <div className="flex-1 relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-green-500" />
-                  <Input
-                    placeholder="Откуда"
-                    value={originInput}
-                    onChange={(e) => setOriginInput(e.target.value)}
-                    className="pl-10"
-                    disabled={isNavigating}
-                  />
-                </div>
+                <AddressAutocomplete
+                  value={originInput}
+                  onChange={setOriginInput}
+                  onSelect={handleOriginSelect}
+                  placeholder="Откуда"
+                  disabled={isNavigating}
+                  icon={<MapPin className="h-4 w-4 text-green-500" />}
+                  className="flex-1"
+                />
                 <Button 
                   variant="outline" 
                   size="icon"
@@ -617,16 +656,14 @@ export default function FreeNavigator() {
                 </Button>
               </div>
               
-              <div className="relative">
-                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-red-500" />
-                <Input
-                  placeholder="Куда"
-                  value={destinationInput}
-                  onChange={(e) => setDestinationInput(e.target.value)}
-                  className="pl-10"
-                  disabled={isNavigating}
-                />
-              </div>
+              <AddressAutocomplete
+                value={destinationInput}
+                onChange={setDestinationInput}
+                onSelect={handleDestinationSelect}
+                placeholder="Куда"
+                disabled={isNavigating}
+                icon={<MapPin className="h-4 w-4 text-red-500" />}
+              />
               
               {/* Travel mode */}
               <div className="flex gap-2">
