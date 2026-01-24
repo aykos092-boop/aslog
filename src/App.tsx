@@ -20,6 +20,7 @@ import ApiDocs from "./pages/ApiDocs";
 import Subscription from "./pages/Subscription";
 import NotFound from "./pages/NotFound";
 import UnifiedNavigator from "./pages/UnifiedNavigator";
+import ClientTracking from "./pages/ClientTracking";
 
 const queryClient = new QueryClient();
 
@@ -41,6 +42,8 @@ const App = () => (
                 <Route path="/orders/:orderId/responses" element={<OrderResponses />} />
                 <Route path="/orders/:orderId/chat/:carrierId" element={<OrderChat />} />
                 <Route path="/deals/:dealId/chat" element={<DealChat />} />
+                {/* Client Tracking - real-time driver location for clients */}
+                <Route path="/tracking/:dealId" element={<ClientTracking />} />
                 {/* Unified Navigator - single navigation component */}
                 <Route path="/navigate/:dealId" element={<UnifiedNavigator />} />
                 <Route path="/navigator" element={<UnifiedNavigator />} />

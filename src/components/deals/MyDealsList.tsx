@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { ru, enUS } from "date-fns/locale";
 import { 
   Package, MapPin, MessageSquare, Loader2, 
-  Truck, CheckCircle, Navigation, Flag, Star
+  Truck, CheckCircle, Navigation, Flag, Star, Eye
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -246,10 +246,25 @@ export const MyDealsList = () => {
                   </div>
                 </div>
 
-                <Button variant="outline" size="sm">
-                  <MessageSquare className="w-4 h-4 mr-1" />
-                  {t("deals.chat")}
-                </Button>
+                <div className="flex flex-col gap-2">
+                  {role === "client" && ["accepted", "in_transit"].includes(deal.status) && (
+                    <Button 
+                      variant="default" 
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/tracking/${deal.id}`);
+                      }}
+                    >
+                      <Eye className="w-4 h-4 mr-1" />
+                      {t("orders.track") || "Отслеживать"}
+                    </Button>
+                  )}
+                  <Button variant="outline" size="sm">
+                    <MessageSquare className="w-4 h-4 mr-1" />
+                    {t("deals.chat")}
+                  </Button>
+                </div>
               </div>
             </div>
           );
