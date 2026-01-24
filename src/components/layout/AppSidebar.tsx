@@ -22,7 +22,6 @@ import {
   FileText,
   Navigation,
   Plus,
-  Wallet,
 } from "lucide-react";
 
 interface NavItem {
@@ -31,28 +30,78 @@ interface NavItem {
   href: string;
 }
 
-const clientNavItems: NavItem[] = [
-  { title: "nav.dashboard", icon: LayoutDashboard, href: "/dashboard" },
-  { title: "orders.myOrders", icon: Package, href: "/dashboard#orders" },
-  { title: "deals.myDeals", icon: FileText, href: "/dashboard#deals" },
-  { title: "favorites.title", icon: Heart, href: "/dashboard#favorites" },
-  { title: "orders.createNew", icon: Plus, href: "/dashboard#create-order" },
+interface NavCategory {
+  category: string;
+  items: NavItem[];
+}
+
+const clientNavCategories: NavCategory[] = [
+  {
+    category: "sidebar.category.main",
+    items: [
+      { title: "nav.dashboard", icon: LayoutDashboard, href: "/dashboard" },
+    ],
+  },
+  {
+    category: "sidebar.category.orders",
+    items: [
+      { title: "orders.myOrders", icon: Package, href: "/dashboard#orders" },
+      { title: "orders.createNew", icon: Plus, href: "/dashboard#create-order" },
+    ],
+  },
+  {
+    category: "sidebar.category.work",
+    items: [
+      { title: "deals.myDeals", icon: FileText, href: "/dashboard#deals" },
+      { title: "favorites.title", icon: Heart, href: "/dashboard#favorites" },
+    ],
+  },
 ];
 
-const carrierNavItems: NavItem[] = [
-  { title: "nav.dashboard", icon: LayoutDashboard, href: "/dashboard" },
-  { title: "orders.available", icon: Truck, href: "/dashboard#available" },
-  { title: "carrier.myResponses", icon: MessageSquare, href: "/dashboard#responses" },
-  { title: "deals.myDeals", icon: FileText, href: "/dashboard#deals" },
-  { title: "carrier.navigation", icon: Navigation, href: "/dashboard#navigation" },
-  { title: "carrier.achievements", icon: Star, href: "/dashboard#achievements" },
+const carrierNavCategories: NavCategory[] = [
+  {
+    category: "sidebar.category.main",
+    items: [
+      { title: "nav.dashboard", icon: LayoutDashboard, href: "/dashboard" },
+    ],
+  },
+  {
+    category: "sidebar.category.orders",
+    items: [
+      { title: "orders.available", icon: Truck, href: "/dashboard#available" },
+      { title: "carrier.myResponses", icon: MessageSquare, href: "/dashboard#responses" },
+    ],
+  },
+  {
+    category: "sidebar.category.work",
+    items: [
+      { title: "deals.myDeals", icon: FileText, href: "/dashboard#deals" },
+      { title: "carrier.navigation", icon: Navigation, href: "/dashboard#navigation" },
+      { title: "carrier.achievements", icon: Star, href: "/dashboard#achievements" },
+    ],
+  },
 ];
 
-const adminNavItems: NavItem[] = [
-  { title: "nav.dashboard", icon: LayoutDashboard, href: "/dashboard" },
-  { title: "admin.users", icon: Users, href: "/admin#users" },
-  { title: "admin.deals", icon: FileText, href: "/admin#deals" },
-  { title: "admin.analytics", icon: BarChart3, href: "/admin#analytics" },
+const adminNavCategories: NavCategory[] = [
+  {
+    category: "sidebar.category.main",
+    items: [
+      { title: "nav.dashboard", icon: LayoutDashboard, href: "/dashboard" },
+    ],
+  },
+  {
+    category: "sidebar.category.management",
+    items: [
+      { title: "admin.users", icon: Users, href: "/admin#users" },
+      { title: "admin.deals", icon: FileText, href: "/admin#deals" },
+    ],
+  },
+  {
+    category: "sidebar.category.analytics",
+    items: [
+      { title: "admin.analytics", icon: BarChart3, href: "/admin#analytics" },
+    ],
+  },
 ];
 
 export const AppSidebar = () => {
@@ -61,7 +110,7 @@ export const AppSidebar = () => {
   const { user, role, signOut } = useAuth();
   const { t } = useLanguage();
 
-  const navItems = role === "admin" ? adminNavItems : role === "carrier" ? carrierNavItems : clientNavItems;
+  const navCategories = role === "admin" ? adminNavCategories : role === "carrier" ? carrierNavCategories : clientNavCategories;
 
   const handleSignOut = async () => {
     await signOut();
@@ -94,7 +143,6 @@ export const AppSidebar = () => {
   };
 
   const handleNavClick = (href: string) => {
-    // Navigate to the hash route
     navigate(href);
   };
 
@@ -108,33 +156,45 @@ export const AppSidebar = () => {
           </Link>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto scrollbar-thin">
-          {navItems.map((item) => {
-            const active = isActive(item.href);
-            return (
-              <button
-                key={item.href}
-                onClick={() => handleNavClick(item.href)}
-                className={cn(
-                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-left",
-                  "hover:bg-accent group relative",
-                  active && "bg-primary/10 text-primary font-medium",
-                  !active && "text-muted-foreground hover:text-foreground"
-                )}
-              >
-                <item.icon className={cn(
-                  "w-5 h-5 flex-shrink-0 transition-colors",
-                  active && "text-primary",
-                  !active && "text-muted-foreground group-hover:text-foreground"
-                )} />
-                <span className="text-sm truncate">{t(item.title) || item.title}</span>
-                {active && (
-                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-full" />
-                )}
-              </button>
-            );
-          })}
+        {/* Navigation with Categories */}
+        <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto scrollbar-thin">
+          {navCategories.map((category, categoryIndex) => (
+            <div key={categoryIndex} className="space-y-1">
+              {/* Category Header */}
+              <div className="px-3 py-1.5">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground/70">
+                  {t(category.category)}
+                </span>
+              </div>
+              
+              {/* Category Items */}
+              {category.items.map((item) => {
+                const active = isActive(item.href);
+                return (
+                  <button
+                    key={item.href}
+                    onClick={() => handleNavClick(item.href)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-left",
+                      "hover:bg-accent group relative",
+                      active && "bg-primary/10 text-primary font-medium",
+                      !active && "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    <item.icon className={cn(
+                      "w-5 h-5 flex-shrink-0 transition-colors",
+                      active && "text-primary",
+                      !active && "text-muted-foreground group-hover:text-foreground"
+                    )} />
+                    <span className="text-sm truncate">{t(item.title) || item.title}</span>
+                    {active && (
+                      <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-primary rounded-r-full" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         {/* User Section */}
