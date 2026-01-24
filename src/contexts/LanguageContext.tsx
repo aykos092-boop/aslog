@@ -99,6 +99,8 @@ const translations: Record<Language, Record<string, string>> = {
     "orders.status.in_progress": "В работе",
     "orders.status.completed": "Завершена",
     "orders.status.cancelled": "Отменена",
+    "orders.createNew": "Новая заявка",
+    "orders.pickupAddressFull": "Полный адрес погрузки",
     
     // Carrier
     "carrier.stats": "Статистика перевозчика",
@@ -125,7 +127,13 @@ const translations: Record<Language, Record<string, string>> = {
     "carrier.navigation": "Навигация",
     "carrier.myResponses": "Мои отклики",
     
+    // Favorites
+    "favorites.title": "Избранные",
+    "favorites.carriers": "Избранные перевозчики",
+    "favorites.empty": "У вас пока нет избранных перевозчиков",
+    
     // Stats
+    "stats.outOf": "из",
     "stats.noRating": "Нет отзывов",
     "stats.excellent": "Отлично",
     "stats.good": "Хорошо",
@@ -149,6 +157,7 @@ const translations: Record<Language, Record<string, string>> = {
     "level.exclusiveOffers": "Эксклюзивные предложения",
     
     // Deals
+    "deals.myDeals": "Мои сделки",
     "deals.status.pending": "Ожидает",
     "deals.status.accepted": "Принята",
     "deals.status.in_transit": "В пути",
@@ -448,6 +457,8 @@ const translations: Record<Language, Record<string, string>> = {
     "orders.status.in_progress": "Jarayonda",
     "orders.status.completed": "Yakunlangan",
     "orders.status.cancelled": "Bekor qilingan",
+    "orders.createNew": "Yangi buyurtma",
+    "orders.pickupAddressFull": "To'liq olish manzili",
     
     // Carrier
     "carrier.stats": "Haydovchi statistikasi",
@@ -471,8 +482,16 @@ const translations: Record<Language, Record<string, string>> = {
     "carrier.respond": "Javob berish",
     "carrier.responded": "Javob berdingiz",
     "carrier.viewDetails": "Batafsil",
+    "carrier.navigation": "Navigatsiya",
+    "carrier.myResponses": "Mening javoblarim",
     
-    // Levels
+    // Favorites
+    "favorites.title": "Sevimlilar",
+    "favorites.carriers": "Sevimli haydovchilar",
+    "favorites.empty": "Sizda hali sevimli haydovchilar yo'q",
+    
+    // Stats
+    "stats.outOf": "dan",
     "level.beginner": "Yangi",
     "level.experienced": "Tajribali",
     "level.professional": "Professional",
@@ -489,6 +508,7 @@ const translations: Record<Language, Record<string, string>> = {
     "level.exclusiveOffers": "Eksklyuziv takliflar",
     
     // Deals
+    "deals.myDeals": "Mening bitimlarim",
     "deals.status.pending": "Kutilmoqda",
     "deals.status.accepted": "Qabul qilindi",
     "deals.status.in_transit": "Yo'lda",
@@ -788,6 +808,8 @@ const translations: Record<Language, Record<string, string>> = {
     "orders.status.in_progress": "In Progress",
     "orders.status.completed": "Completed",
     "orders.status.cancelled": "Cancelled",
+    "orders.createNew": "New Order",
+    "orders.pickupAddressFull": "Full pickup address",
     
     // Carrier
     "carrier.stats": "Carrier Statistics",
@@ -811,8 +833,16 @@ const translations: Record<Language, Record<string, string>> = {
     "carrier.respond": "Respond",
     "carrier.responded": "You responded",
     "carrier.viewDetails": "Details",
+    "carrier.navigation": "Navigation",
+    "carrier.myResponses": "My Responses",
     
-    // Levels
+    // Favorites
+    "favorites.title": "Favorites",
+    "favorites.carriers": "Favorite Carriers",
+    "favorites.empty": "You don't have any favorite carriers yet",
+    
+    // Stats
+    "stats.outOf": "of",
     "level.beginner": "Beginner",
     "level.experienced": "Experienced",
     "level.professional": "Professional",
@@ -829,6 +859,7 @@ const translations: Record<Language, Record<string, string>> = {
     "level.exclusiveOffers": "Exclusive Offers",
     
     // Deals
+    "deals.myDeals": "My Deals",
     "deals.status.pending": "Pending",
     "deals.status.accepted": "Accepted",
     "deals.status.in_transit": "In Transit",
