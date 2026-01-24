@@ -559,31 +559,50 @@ const Navigator = () => {
 
     const steps = selectedRoute.steps;
     
+    // Find closest step to current position
+    let closestStepIndex = 0;
+    let closestDistance = Infinity;
+    
     for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
+      const distance = calculateDistance(currentPos, step.startLocation);
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closestStepIndex = i;
+      }
+    }
+    
+    // Announce upcoming maneuvers (current and next)
+    for (let i = closestStepIndex; i < Math.min(closestStepIndex + 2, steps.length); i++) {
       const step = steps[i];
       const stepStart = step.startLocation;
       const distance = calculateDistance(currentPos, stepStart);
       
-      // Announce at different distances based on speed/mode
-      const announceDistances = travelMode === "walking" ? [50, 20] : [500, 200, 100, 50];
+      // Dynamic announce distances based on travel mode
+      const announceDistances = travelMode === "walking" 
+        ? [100, 50, 20] 
+        : [1000, 500, 200, 100, 50];
       
       for (const announceDistance of announceDistances) {
-        // Check if we should announce this step at this distance
-        if (distance <= announceDistance && distance > (announceDistance - 30)) {
-          // Avoid repeating the same announcement
-          const announcementKey = i * 1000 + announceDistance;
+        const tolerance = announceDistance * 0.15; // 15% tolerance
+        
+        if (distance <= announceDistance && distance > (announceDistance - tolerance)) {
+          const announcementKey = i * 10000 + announceDistance;
           if (lastAnnouncedStepRef.current !== announcementKey) {
             lastAnnouncedStepRef.current = announcementKey;
             
-            // Format distance for announcement
+            // Format distance for Russian speech
             let distanceText: string;
-            if (announceDistance >= 1000) {
-              distanceText = `${(announceDistance / 1000).toFixed(1)} километра`;
+            if (distance >= 1000) {
+              const km = Math.round(distance / 100) / 10;
+              distanceText = km === 1 ? "1 километр" : 
+                            km < 5 ? `${km} километра` : `${km} километров`;
             } else {
-              distanceText = `${announceDistance} метров`;
+              const m = Math.round(distance / 50) * 50; // Round to nearest 50m
+              distanceText = m === 1 ? "1 метр" : 
+                            m < 5 ? `${m} метра` : `${m} метров`;
             }
             
-            // Announce the maneuver
             speakInstruction(step.instruction, distanceText);
             return;
           }
@@ -592,12 +611,15 @@ const Navigator = () => {
     }
     
     // Check if arrived at destination
-    const destination = steps[steps.length - 1]?.endLocation;
-    if (destination) {
-      const distanceToEnd = calculateDistance(currentPos, destination);
-      if (distanceToEnd < 50 && lastAnnouncedStepRef.current !== -999) {
+    const lastStep = steps[steps.length - 1];
+    if (lastStep) {
+      const distanceToEnd = calculateDistance(currentPos, lastStep.endLocation);
+      if (distanceToEnd < 30 && lastAnnouncedStepRef.current !== -999) {
         lastAnnouncedStepRef.current = -999;
-        speak("Вы прибыли к месту назначения");
+        speak("Вы прибыли к месту назначения. Хорошего дня!");
+      } else if (distanceToEnd < 100 && lastAnnouncedStepRef.current !== -998) {
+        lastAnnouncedStepRef.current = -998;
+        speak("Пункт назначения рядом, слева");
       }
     }
   }, [selectedRoute, voiceSettings.enabled, isNavigating, travelMode, calculateDistance, speakInstruction, speak]);
@@ -612,9 +634,17 @@ const Navigator = () => {
     setIsNavigating(true);
     lastAnnouncedStepRef.current = -1;
     
-    // Announce route start
+    // Announce route start with details
     if (selectedRoute && voiceSettings.enabled) {
-      speak(`Маршрут: ${selectedRoute.distance.text}, время в пути ${selectedRoute.duration.text}`);
+      const routeInfo = `Маршрут построен. ${selectedRoute.distance.text}, время в пути примерно ${selectedRoute.duration.text}`;
+      speak(routeInfo);
+      
+      // Announce first instruction after a delay
+      setTimeout(() => {
+        if (selectedRoute.steps.length > 0) {
+          speak(selectedRoute.steps[0].instruction);
+        }
+      }, 3000);
     }
 
     // Watch position for real-time updates
@@ -638,8 +668,8 @@ const Navigator = () => {
               .addTo(mapRef.current);
           }
           
-          // Keep map centered on user
-          mapRef.current.setView([coords.lat, coords.lng], 17, { animate: true });
+          // Smooth pan to keep user centered
+          mapRef.current.panTo([coords.lat, coords.lng], { animate: true, duration: 0.5 });
         }
         
         // Check for maneuver announcements
@@ -647,12 +677,12 @@ const Navigator = () => {
       },
       (err) => {
         console.error("GPS error:", err);
-        toast({ title: t.error, description: "Ошибка GPS" });
+        toast({ title: t.error, description: "Ошибка определения местоположения. Проверьте GPS." });
       },
       { 
         enableHighAccuracy: true, 
-        maximumAge: 5000, 
-        timeout: 10000 
+        maximumAge: 3000, 
+        timeout: 15000 
       }
     );
   }, [selectedRoute, voiceSettings.enabled, speak, checkAndAnnounceManeuver, toast, t]);

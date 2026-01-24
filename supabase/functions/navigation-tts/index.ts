@@ -11,43 +11,55 @@ serve(async (req) => {
   }
 
   try {
-    const { text, language = "ru", premium = false } = await req.json();
+    const { text, language = "ru", premium = false, gender = "male" } = await req.json();
 
     if (!text) {
       return new Response(
-        JSON.stringify({ error: "Text is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log("TTS request:", { text: text.substring(0, 50), language, premium });
-
-    // If not premium, instruct to use browser TTS
-    if (!premium) {
-      return new Response(
-        JSON.stringify({ 
-          useBrowserTTS: true,
-          text,
-          language,
-        }),
+        JSON.stringify({ useBrowserTTS: true, text: "", language }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Premium TTS using Google Cloud Text-to-Speech
-    const apiKey = Deno.env.get("GOOGLE_MAPS_API_KEY");
-    
-    if (!apiKey) {
-      console.log("No API key, falling back to browser TTS");
+    console.log("TTS request:", { text: text.substring(0, 50), language, premium, gender });
+
+    // If not premium, use browser TTS
+    if (!premium) {
       return new Response(
         JSON.stringify({ useBrowserTTS: true, text, language }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Select voice based on language
-    const voiceName = language === "ru" ? "ru-RU-Wavenet-D" : "en-US-Wavenet-D";
-    const languageCode = language === "ru" ? "ru-RU" : "en-US";
+    const apiKey = Deno.env.get("GOOGLE_MAPS_API_KEY");
+    
+    if (!apiKey) {
+      console.log("No Google API key, falling back to browser TTS");
+      return new Response(
+        JSON.stringify({ useBrowserTTS: true, text, language }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Voice selection based on language and gender
+    const voiceMap: Record<string, Record<string, string>> = {
+      ru: { 
+        male: "ru-RU-Wavenet-D",
+        female: "ru-RU-Wavenet-E"
+      },
+      en: { 
+        male: "en-US-Wavenet-D",
+        female: "en-US-Wavenet-F"
+      },
+      uz: {
+        male: "uz-UZ-Standard-A",
+        female: "uz-UZ-Standard-A"
+      }
+    };
+
+    const languageCode = language === "ru" ? "ru-RU" : language === "uz" ? "uz-UZ" : "en-US";
+    const voiceName = voiceMap[language]?.[gender] || voiceMap["ru"]["male"];
+
+    console.log("Calling Google TTS with voice:", voiceName);
 
     const ttsResponse = await fetch(
       `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`,
@@ -59,14 +71,14 @@ serve(async (req) => {
           voice: {
             languageCode,
             name: voiceName,
-            ssmlGender: "MALE",
+            ssmlGender: gender === "female" ? "FEMALE" : "MALE"
           },
           audioConfig: {
             audioEncoding: "MP3",
-            speakingRate: 1.1,
+            speakingRate: 1.05,
             pitch: 0,
-            volumeGainDb: 3.0,
-          },
+            volumeGainDb: 2.0
+          }
         }),
       }
     );
@@ -74,8 +86,6 @@ serve(async (req) => {
     if (!ttsResponse.ok) {
       const errorText = await ttsResponse.text();
       console.error("Google TTS error:", ttsResponse.status, errorText);
-      
-      // Fallback to browser TTS on any error
       return new Response(
         JSON.stringify({ useBrowserTTS: true, text, language }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -84,29 +94,26 @@ serve(async (req) => {
 
     const ttsData = await ttsResponse.json();
 
-    if (!ttsData.audioContent) {
-      console.log("No audio content, falling back to browser TTS");
+    if (ttsData.audioContent) {
+      console.log("Google TTS success, returning MP3 audio");
       return new Response(
-        JSON.stringify({ useBrowserTTS: true, text, language }),
+        JSON.stringify({ 
+          audioContent: ttsData.audioContent, 
+          premium: true,
+          format: "mp3"
+        }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("Premium TTS generated successfully");
-
+    console.log("No audio content, falling back to browser TTS");
     return new Response(
-      JSON.stringify({ 
-        audioContent: ttsData.audioContent,
-        premium: true,
-      }),
+      JSON.stringify({ useBrowserTTS: true, text, language }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    console.error("Error in navigation-tts:", errorMessage);
-    
-    // Always fallback to browser TTS on error
+  } catch (error) {
+    console.error("TTS error:", error);
     return new Response(
       JSON.stringify({ useBrowserTTS: true }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
