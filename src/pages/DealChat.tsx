@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { format } from "date-fns";
-import { ru } from "date-fns/locale";
+import { ru, uz } from "date-fns/locale";
+import { enUS } from "date-fns/locale";
 import { 
   ArrowLeft, Package, MapPin, MessageSquare, Loader2, 
   Truck, CheckCircle, Navigation, Flag, Star, XCircle, Banknote, Maximize2
@@ -9,6 +10,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -67,19 +69,22 @@ interface Rating {
   rated_id: string;
 }
 
-const statusConfig = {
-  pending: { label: "Ожидает", icon: Truck, color: "bg-muted" },
-  accepted: { label: "Принята", icon: CheckCircle, color: "bg-customer" },
-  in_transit: { label: "В пути", icon: Navigation, color: "bg-driver" },
-  delivered: { label: "Доставлено", icon: Flag, color: "bg-gold" },
-  cancelled: { label: "Отменена", icon: Truck, color: "bg-destructive" },
-};
-
 const DealChat = () => {
   const { dealId } = useParams<{ dealId: string }>();
   const navigate = useNavigate();
   const { user, role } = useAuth();
   const { toast } = useToast();
+  const { t, language } = useLanguage();
+
+  const dateLocale = language === "ru" ? ru : language === "uz" ? uz : enUS;
+
+  const statusConfig = {
+    pending: { label: t("deals.status.pending"), icon: Truck, color: "bg-muted" },
+    accepted: { label: t("deals.status.accepted"), icon: CheckCircle, color: "bg-customer" },
+    in_transit: { label: t("deals.status.in_transit"), icon: Navigation, color: "bg-driver" },
+    delivered: { label: t("deals.status.delivered"), icon: Flag, color: "bg-gold" },
+    cancelled: { label: t("deals.status.cancelled"), icon: Truck, color: "bg-destructive" },
+  };
 
   const [deal, setDeal] = useState<Deal | null>(null);
   const [loading, setLoading] = useState(true);
@@ -105,8 +110,8 @@ const DealChat = () => {
 
     if (dealError || !dealData) {
       toast({
-        title: "Ошибка",
-        description: "Сделка не найдена",
+        title: t("dealChat.error"),
+        description: t("dealChat.dealNotFound"),
         variant: "destructive",
       });
       navigate("/dashboard");
@@ -119,8 +124,8 @@ const DealChat = () => {
 
     if (!isClientUser && !isCarrierUser) {
       toast({
-        title: "Доступ запрещён",
-        description: "Вы не являетесь участником этой сделки",
+        title: t("dealChat.accessDenied"),
+        description: t("dealChat.notParticipant"),
         variant: "destructive",
       });
       navigate("/dashboard");
@@ -137,7 +142,7 @@ const DealChat = () => {
       .eq("user_id", otherUserId)
       .single();
 
-    setOtherParticipantName(profileData?.full_name || "Участник");
+    setOtherParticipantName(profileData?.full_name || t("dealChat.participant"));
     setLoading(false);
   };
 
@@ -204,8 +209,8 @@ const DealChat = () => {
 
     if (dealError) {
       toast({
-        title: "Ошибка",
-        description: "Не удалось обновить статус",
+        title: t("dealChat.error"),
+        description: t("dealChat.updateFailed"),
         variant: "destructive",
       });
       setUpdatingStatus(false);
@@ -223,7 +228,7 @@ const DealChat = () => {
     setUpdatingStatus(false);
 
     toast({
-      title: "Статус обновлён",
+      title: t("dealChat.statusUpdated"),
       description: message,
     });
   };
@@ -241,8 +246,8 @@ const DealChat = () => {
 
     if (dealError) {
       toast({
-        title: "Ошибка",
-        description: "Не удалось отменить сделку",
+        title: t("dealChat.error"),
+        description: t("dealChat.cancelFailed"),
         variant: "destructive",
       });
       setCancelling(false);
@@ -256,11 +261,11 @@ const DealChat = () => {
       .eq("id", deal.order_id);
 
     // Add system message with cancellation reason
-    const cancellerRole = isCarrier ? "Перевозчик" : "Клиент";
+    const cancellerRole = isCarrier ? t("dealChat.carrier") : t("dealChat.client");
     await supabase.from("messages").insert({
       deal_id: deal.id,
       sender_id: user.id,
-      content: `${cancellerRole} отменил сделку. Причина: ${cancelReason.trim()}`,
+      content: `${cancellerRole} ${t("dealChat.dealCancelled").toLowerCase()}. ${t("dealChat.cancelReason")}: ${cancelReason.trim()}`,
       is_system: true,
     });
 
@@ -269,8 +274,8 @@ const DealChat = () => {
     setCancelReason("");
 
     toast({
-      title: "Сделка отменена",
-      description: "Заявка снова доступна для других перевозчиков",
+      title: t("dealChat.dealCancelled"),
+      description: t("dealChat.orderAvailable"),
     });
 
     navigate("/dashboard");
@@ -310,7 +315,7 @@ const DealChat = () => {
               <div>
                 <h1 className="font-semibold flex items-center gap-2">
                   <MessageSquare className="w-4 h-4" />
-                  Чат сделки
+                  {t("dealChat.title")}
                 </h1>
                 <div className="flex items-center gap-1">
                   <Link 
@@ -355,22 +360,22 @@ const DealChat = () => {
                   <Button
                     size="sm"
                     variant="driver"
-                    onClick={() => updateDealStatus("accepted", "Перевозчик принял заказ")}
+                    onClick={() => updateDealStatus("accepted", t("dealChat.carrierAccepted"))}
                     disabled={updatingStatus}
                   >
                     <CheckCircle className="w-4 h-4 mr-1" />
-                    Принять заказ
+                    {t("dealChat.acceptOrder")}
                   </Button>
                 )}
                 {deal.status === "accepted" && (
                   <Button
                     size="sm"
                     variant="driver"
-                    onClick={() => updateDealStatus("in_transit", "Груз в пути")}
+                    onClick={() => updateDealStatus("in_transit", t("dealChat.cargoInTransit"))}
                     disabled={updatingStatus}
                   >
                     <Navigation className="w-4 h-4 mr-1" />
-                    Начать доставку
+                    {t("dealChat.startDelivery")}
                   </Button>
                 )}
                 {deal.status === "in_transit" && (
@@ -381,16 +386,16 @@ const DealChat = () => {
                       onClick={() => navigate(`/navigator/${deal.order_id}`)}
                     >
                       <Maximize2 className="w-4 h-4 mr-1" />
-                      Полная навигация
+                      {t("navigation.fullNavigation")}
                     </Button>
                     <Button
                       size="sm"
                       variant="driver"
-                      onClick={() => updateDealStatus("delivered", "Груз доставлен!")}
+                      onClick={() => updateDealStatus("delivered", t("dealChat.cargoDelivered"))}
                       disabled={updatingStatus}
                     >
                       <Flag className="w-4 h-4 mr-1" />
-                      Завершить доставку
+                      {t("dealChat.completeDelivery")}
                     </Button>
                   </>
                 )}
@@ -406,7 +411,7 @@ const DealChat = () => {
                 disabled={updatingStatus}
               >
                 <XCircle className="w-4 h-4 mr-1" />
-                Отменить сделку
+                {t("dealChat.cancelDeal")}
               </Button>
             )}
           </div>
@@ -437,8 +442,8 @@ const DealChat = () => {
                 onPriceAgreed={(newPrice) => {
                   setDeal(prev => prev ? { ...prev, agreed_price: newPrice } : null);
                   toast({
-                    title: "Цена обновлена",
-                    description: `Новая согласованная цена: ${newPrice.toLocaleString("ru-RU")} ₽`,
+                    title: t("dealChat.priceUpdated"),
+                    description: `${t("dealChat.newAgreedPrice")}: ${newPrice.toLocaleString()} ₽`,
                   });
                 }}
               />
@@ -451,7 +456,7 @@ const DealChat = () => {
               <div className="flex-1 min-h-0 p-4">
                 <div className="bg-card border rounded-lg p-6 text-center space-y-4">
                   <Navigation className="w-12 h-12 mx-auto text-primary" />
-                  <h3 className="text-lg font-semibold">Навигация</h3>
+                  <h3 className="text-lg font-semibold">{t("navigation.title")}</h3>
                   <p className="text-muted-foreground text-sm">
                     {deal.order?.pickup_address} → {deal.order?.delivery_address}
                   </p>
@@ -461,7 +466,7 @@ const DealChat = () => {
                     onClick={() => navigate(`/navigator/${deal.order_id}`)}
                   >
                     <Navigation className="w-4 h-4 mr-2" />
-                    Открыть навигатор
+                    {t("navigation.openNavigator")}
                   </Button>
                 </div>
               </div>
@@ -478,7 +483,7 @@ const DealChat = () => {
               {myRating ? (
                 <RatingDisplay 
                   rating={myRating} 
-                  title="Ваш отзыв" 
+                  title={t("dealChat.yourReview")} 
                 />
               ) : (
                 <RatingForm
@@ -494,7 +499,7 @@ const DealChat = () => {
                   <CardContent className="pt-4">
                     <div className="flex items-center gap-2 mb-2">
                       <Star className="w-4 h-4 text-gold fill-gold" />
-                      <span className="font-medium text-sm">Отзыв от {otherParticipantName}</span>
+                      <span className="font-medium text-sm">{t("dealChat.reviewFrom")} {otherParticipantName}</span>
                     </div>
                     <div className="flex gap-0.5 mb-2">
                       {[1, 2, 3, 4, 5].map((s) => (
@@ -532,19 +537,18 @@ const DealChat = () => {
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <XCircle className="w-5 h-5 text-destructive" />
-              Отменить сделку?
+              {t("dealChat.cancelQuestion")}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Сделка будет отменена, а заявка снова станет доступна для других перевозчиков.
-              Вторая сторона получит уведомление об отмене.
+              {t("dealChat.cancelDescription")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           
           <div className="space-y-2 py-2">
-            <Label htmlFor="cancel-reason">Причина отмены *</Label>
+            <Label htmlFor="cancel-reason">{t("dealChat.cancelReason")} *</Label>
             <Textarea
               id="cancel-reason"
-              placeholder="Укажите причину отмены сделки..."
+              placeholder={t("dealChat.cancelReasonPlaceholder")}
               value={cancelReason}
               onChange={(e) => setCancelReason(e.target.value)}
               className="resize-none"
@@ -553,7 +557,7 @@ const DealChat = () => {
           </div>
 
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={cancelling}>Назад</AlertDialogCancel>
+            <AlertDialogCancel disabled={cancelling}>{t("common.back")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleCancelDeal}
               disabled={cancelling || !cancelReason.trim()}
@@ -562,10 +566,10 @@ const DealChat = () => {
               {cancelling ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Отмена...
+                  {t("dealChat.cancelling")}
                 </>
               ) : (
-                "Отменить сделку"
+                t("dealChat.cancelDeal")
               )}
             </AlertDialogAction>
           </AlertDialogFooter>
