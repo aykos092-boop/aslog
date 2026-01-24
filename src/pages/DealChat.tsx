@@ -30,7 +30,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ChatMessages } from "@/components/chat/ChatMessages";
 import { LiveMap } from "@/components/tracking/LiveMap";
-import { GoogleNavigator } from "@/components/tracking/GoogleNavigator";
 import { GpsTracker } from "@/components/tracking/GpsTracker";
 import { ClientTrackingPanel } from "@/components/tracking/ClientTrackingPanel";
 import { RatingForm } from "@/components/ratings/RatingForm";

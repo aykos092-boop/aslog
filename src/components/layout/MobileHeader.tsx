@@ -9,6 +9,7 @@ import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Logo } from "@/components/ui/Logo";
 import {
   Menu,
   LayoutDashboard,
@@ -23,6 +24,7 @@ import {
   BarChart3,
   FileText,
   Navigation,
+  Wallet,
 } from "lucide-react";
 
 interface NavItem {
@@ -103,12 +105,7 @@ export const MobileHeader = () => {
     <header className="lg:hidden sticky top-0 z-50 h-14 border-b border-border bg-background/95 backdrop-blur-sm flex items-center justify-between px-4">
       {/* Logo */}
       <Link to="/" className="flex items-center gap-2">
-        <div className="w-8 h-8 gradient-hero rounded-xl flex items-center justify-center">
-          <Truck className="w-4 h-4 text-white" />
-        </div>
-        <span className="text-base font-bold tracking-tight">
-          Asia<span className="text-primary">Log</span>
-        </span>
+        <Logo size="xs" showText={true} />
       </Link>
 
       {/* Right Actions */}

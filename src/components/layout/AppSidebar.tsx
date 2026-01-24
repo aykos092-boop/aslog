@@ -5,6 +5,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Logo } from "@/components/ui/Logo";
 import {
   LayoutDashboard,
   Package,
@@ -21,6 +22,7 @@ import {
   FileText,
   Navigation,
   Plus,
+  Wallet,
 } from "lucide-react";
 
 interface NavItem {
@@ -99,15 +101,10 @@ export const AppSidebar = () => {
   return (
     <TooltipProvider>
       <aside className="fixed left-0 top-0 z-40 h-screen w-64 bg-sidebar border-r border-sidebar-border flex flex-col">
-        {/* Header */}
+        {/* Header with Logo */}
         <div className="flex items-center h-16 px-4 border-b border-sidebar-border">
           <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 gradient-hero rounded-xl flex items-center justify-center transition-transform group-hover:scale-105">
-              <Truck className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-lg font-bold tracking-tight">
-              Asia<span className="text-primary">Log</span>
-            </span>
+            <Logo size="sm" showText={true} />
           </Link>
         </div>
 

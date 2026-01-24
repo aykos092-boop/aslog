@@ -18,9 +18,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminLogin from "./pages/AdminLogin";
 import ApiDocs from "./pages/ApiDocs";
 import NotFound from "./pages/NotFound";
-import NavigationPage from "./pages/NavigationPage";
-import Navigator from "./pages/Navigator";
-import FreeNavigator from "./pages/FreeNavigator";
+import UnifiedNavigator from "./pages/UnifiedNavigator";
 
 const queryClient = new QueryClient();
 
@@ -42,14 +40,14 @@ const App = () => (
                 <Route path="/orders/:orderId/responses" element={<OrderResponses />} />
                 <Route path="/orders/:orderId/chat/:carrierId" element={<OrderChat />} />
                 <Route path="/deals/:dealId/chat" element={<DealChat />} />
-                <Route path="/navigate/:dealId" element={<NavigationPage />} />
+                {/* Unified Navigator - single navigation component */}
+                <Route path="/navigate/:dealId" element={<UnifiedNavigator />} />
+                <Route path="/navigator" element={<UnifiedNavigator />} />
+                <Route path="/navigator/:orderId" element={<UnifiedNavigator />} />
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/profile" element={<UserProfile />} />
                 <Route path="/profile/:userId" element={<UserProfile />} />
                 <Route path="/api-docs" element={<ApiDocs />} />
-                <Route path="/navigator" element={<Navigator />} />
-                <Route path="/navigator/:orderId" element={<Navigator />} />
-                <Route path="/free-navigator" element={<FreeNavigator />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
