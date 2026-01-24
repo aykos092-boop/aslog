@@ -52,6 +52,10 @@ interface Deal {
     delivery_address: string;
     pickup_date: string;
     client_price?: number | null;
+    pickup_lat?: number | null;
+    pickup_lng?: number | null;
+    delivery_lat?: number | null;
+    delivery_lng?: number | null;
   };
 }
 
@@ -95,7 +99,7 @@ const DealChat = () => {
       .from("deals")
       .select(`
         *,
-        order:orders(cargo_type, pickup_address, delivery_address, pickup_date, client_price)
+        order:orders(cargo_type, pickup_address, delivery_address, pickup_date, client_price, pickup_lat, pickup_lng, delivery_lat, delivery_lng)
       `)
       .eq("id", dealId)
       .single();
@@ -452,6 +456,14 @@ const DealChat = () => {
                   carrierName={otherParticipantName}
                   pickupAddress={deal.order?.pickup_address}
                   deliveryAddress={deal.order?.delivery_address}
+                  pickupCoords={deal.order?.pickup_lat && deal.order?.pickup_lng ? {
+                    lat: deal.order.pickup_lat,
+                    lon: deal.order.pickup_lng
+                  } : undefined}
+                  deliveryCoords={deal.order?.delivery_lat && deal.order?.delivery_lng ? {
+                    lat: deal.order.delivery_lat,
+                    lon: deal.order.delivery_lng
+                  } : undefined}
                 />
               </div>
             ) : (

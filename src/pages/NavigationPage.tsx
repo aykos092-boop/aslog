@@ -9,6 +9,10 @@ interface OrderData {
   pickup_address: string;
   delivery_address: string;
   cargo_type: string;
+  pickup_lat?: number | null;
+  pickup_lng?: number | null;
+  delivery_lat?: number | null;
+  delivery_lng?: number | null;
 }
 
 interface DealWithOrder {
@@ -43,7 +47,11 @@ const NavigationPage = () => {
             order:orders!order_id (
               pickup_address,
               delivery_address,
-              cargo_type
+              cargo_type,
+              pickup_lat,
+              pickup_lng,
+              delivery_lat,
+              delivery_lng
             )
           `)
           .eq("id", dealId)
@@ -131,6 +139,14 @@ const NavigationPage = () => {
       pickupAddress={deal.order.pickup_address}
       deliveryAddress={deal.order.delivery_address}
       cargoType={deal.order.cargo_type}
+      pickupCoords={deal.order.pickup_lat && deal.order.pickup_lng ? {
+        lat: deal.order.pickup_lat,
+        lon: deal.order.pickup_lng
+      } : undefined}
+      deliveryCoords={deal.order.delivery_lat && deal.order.delivery_lng ? {
+        lat: deal.order.delivery_lat,
+        lon: deal.order.delivery_lng
+      } : undefined}
       onClose={handleClose}
     />
   );
