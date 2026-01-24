@@ -240,6 +240,11 @@ export const FullScreenNavigator = ({
     // Add zoom control to bottom right
     L.control.zoom({ position: "bottomright" }).addTo(mapRef.current);
 
+    // Force map to recalculate its size after container is fully rendered
+    setTimeout(() => {
+      mapRef.current?.invalidateSize();
+    }, 100);
+
     return () => {
       if (mapRef.current) {
         mapRef.current.remove();
@@ -264,6 +269,15 @@ export const FullScreenNavigator = ({
       subdomains: tileConfig.subdomains || undefined,
     }).addTo(mapRef.current);
   }, [mapStyle]);
+
+  // Recalculate map size when panel expands/collapses
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const id = window.setTimeout(() => {
+      mapRef.current?.invalidateSize();
+    }, 350);
+    return () => window.clearTimeout(id);
+  }, [panelExpanded]);
 
   // Draw route on map
   useEffect(() => {
@@ -604,7 +618,9 @@ export const FullScreenNavigator = ({
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
       {/* Map */}
-      <div ref={mapContainerRef} className="flex-1 w-full" />
+      <div className="flex-1 relative min-h-[300px]">
+        <div ref={mapContainerRef} className="absolute inset-0" />
+      </div>
 
       {/* Top Controls */}
       <div className="absolute top-4 left-4 right-4 flex items-start justify-between pointer-events-none">
