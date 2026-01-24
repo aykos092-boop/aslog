@@ -6,7 +6,7 @@ import {
   Navigation, MapPin, Clock, Route as RouteIcon, Car, 
   Footprints, Bus, Bike, ArrowLeft, Loader2,
   ChevronRight, DollarSign, AlertTriangle, RotateCcw,
-  X, ChevronDown, ChevronUp, Compass, Locate
+  X, ChevronDown, ChevronUp, Compass, Locate, Camera, CloudOff
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,11 @@ import { cn } from "@/lib/utils";
 import { useVoiceNavigation, VoiceGender } from "@/hooks/useVoiceNavigation";
 import { VoiceSettingsPanel, VoiceSettings } from "@/components/navigation/VoiceSettingsPanel";
 import { OpenInGoogleMapsButton } from "@/components/navigation/OpenInGoogleMapsButton";
+import { useOfflineCache } from "@/hooks/useOfflineCache";
+import { useSpeedCameraAlerts, SpeedCamera } from "@/hooks/useSpeedCameraAlerts";
+import { SpeedCameraOverlay } from "@/components/navigation/SpeedCameraOverlay";
+import { OfflineCacheStatus } from "@/components/navigation/OfflineCacheStatus";
+import { RouteAlternativesPanel } from "@/components/navigation/RouteAlternativesPanel";
 
 // Types
 type TravelMode = "driving" | "walking" | "transit" | "bicycling";
@@ -197,6 +202,9 @@ const Navigator = () => {
   const [followMeMode, setFollowMeMode] = useState(false);
   const [currentHeading, setCurrentHeading] = useState<number>(0);
   const [lastPosition, setLastPosition] = useState<Coords | null>(null);
+  const [currentSpeed, setCurrentSpeed] = useState<number>(0);
+  const [isOffline, setIsOffline] = useState(false);
+  const [cameraMarkersRef] = useState<L.Marker[]>([]);
   
   // Voice settings state
   const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>({
@@ -225,6 +233,28 @@ const Navigator = () => {
     updateVoiceSettings(newSettings.gender, newSettings.rate);
   }, [updateVoiceSettings]);
 
+  // Offline cache hook
+  const { cacheRoute, getCachedRoute, preCacheTilesForRoute } = useOfflineCache();
+  
+  // Speed camera alerts hook
+  const { 
+    nearbyCamera, 
+    checkPosition: checkSpeedCamera, 
+    getAllCameras,
+    resetAlerts: resetCameraAlerts,
+  } = useSpeedCameraAlerts(voiceSettings.enabled, language);
+
+  // Check online/offline status
+  useEffect(() => {
+    const updateOnlineStatus = () => setIsOffline(!navigator.onLine);
+    updateOnlineStatus();
+    window.addEventListener("online", updateOnlineStatus);
+    window.addEventListener("offline", updateOnlineStatus);
+    return () => {
+      window.removeEventListener("online", updateOnlineStatus);
+      window.removeEventListener("offline", updateOnlineStatus);
+    };
+  }, []);
   // Test voice
   const handleTestVoice = useCallback(() => {
     const testPhrase = language === "ru" 
@@ -243,6 +273,7 @@ const Navigator = () => {
   const watchIdRef = useRef<number | null>(null);
   const tileLayerRef = useRef<L.TileLayer | null>(null);
   const mapContainerWrapperRef = useRef<HTMLDivElement>(null);
+  const cameraLayerRef = useRef<L.LayerGroup | null>(null);
   
   // Calculate bearing between two points
   const calculateBearing = useCallback((from: Coords, to: Coords): number => {
@@ -505,11 +536,38 @@ const Navigator = () => {
     setError(null);
     setRoutes([]);
 
+    // Generate cache key
+    const origin = orderFromCoords ?? fromAddress;
+    const destination = orderToCoords ?? toAddress;
+    const cacheKey = JSON.stringify({ origin, destination, mode: travelMode });
+
     try {
+      // Try to get cached route first (for offline mode)
+      if (isOffline) {
+        const cachedData = await getCachedRoute(
+          typeof origin === "string" ? origin : `${origin.lat},${origin.lng}`,
+          typeof destination === "string" ? destination : `${destination.lat},${destination.lng}`,
+          travelMode
+        );
+        
+        if (cachedData) {
+          toast({
+            title: "Офлайн режим",
+            description: "Используется кэшированный маршрут",
+          });
+          const routeData = cachedData.routes as RouteData[];
+          setRoutes(routeData);
+          setSelectedRouteIndex(0);
+          drawRoutes(routeData, 0);
+          setLoading(false);
+          return;
+        }
+      }
+
       const { data, error: fnError } = await supabase.functions.invoke("google-directions", {
         body: {
-          origin: orderFromCoords ?? fromAddress,
-          destination: orderToCoords ?? toAddress,
+          origin,
+          destination,
           mode: travelMode,
           alternatives: true,
           language: language === "uz" ? "ru" : language,
@@ -533,6 +591,20 @@ const Navigator = () => {
       setSelectedRouteIndex(0);
       drawRoutes(routeData, 0);
 
+      // Cache the route for offline use
+      await cacheRoute(
+        typeof origin === "string" ? origin : `${origin.lat},${origin.lng}`,
+        typeof destination === "string" ? destination : `${destination.lat},${destination.lng}`,
+        travelMode,
+        data
+      );
+
+      // Pre-cache map tiles for the route bounds
+      if (routeData[0]?.bounds) {
+        const tileUrl = mapTileUrls[mapStyle].url;
+        preCacheTilesForRoute(routeData[0].bounds, tileUrl, [14, 15, 16]).catch(console.error);
+      }
+
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : t.noRoute;
       setError(errMsg);
@@ -544,7 +616,7 @@ const Navigator = () => {
     } finally {
       setLoading(false);
     }
-  }, [fromAddress, toAddress, orderFromCoords, orderToCoords, travelMode, language, toast, t, drawRoutes]);
+  }, [fromAddress, toAddress, orderFromCoords, orderToCoords, travelMode, language, toast, t, drawRoutes, isOffline, getCachedRoute, cacheRoute, preCacheTilesForRoute, mapStyle]);
 
   const handleBack = useCallback(() => {
     // If user opened /navigator/:id directly, history back can be a no-op
@@ -665,10 +737,15 @@ const Navigator = () => {
       }, 3000);
     }
 
+    // Reset camera alerts
+    resetCameraAlerts();
+
     // Watch position for real-time updates
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
         const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        const speed = pos.coords.speed ? pos.coords.speed * 3.6 : 0; // Convert m/s to km/h
+        setCurrentSpeed(speed);
         
         // Calculate heading from last position
         if (lastPosition) {
@@ -680,6 +757,9 @@ const Navigator = () => {
         }
         setLastPosition(coords);
         setCurrentPosition(coords);
+        
+        // Check for speed cameras
+        checkSpeedCamera(coords, speed);
         
         // Update location marker on map with rotation
         if (mapRef.current) {
@@ -1206,6 +1286,24 @@ const Navigator = () => {
         >
           <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" />
         </div>
+
+        {/* Speed Camera Alert Overlay */}
+        {isNavigating && nearbyCamera && (
+          <div className="absolute top-4 left-4 right-20 z-20">
+            <SpeedCameraOverlay 
+              camera={nearbyCamera} 
+              currentSpeed={currentSpeed}
+            />
+          </div>
+        )}
+
+        {/* Offline indicator */}
+        {isOffline && (
+          <div className="absolute top-4 left-4 z-20 bg-amber-500 text-white px-3 py-1.5 rounded-lg flex items-center gap-2 shadow-lg">
+            <CloudOff className="h-4 w-4" />
+            <span className="text-sm font-medium">Офлайн</span>
+          </div>
+        )}
 
         {/* Compass indicator when in follow mode */}
         {followMeMode && isNavigating && (
