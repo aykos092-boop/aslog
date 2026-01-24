@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -50,6 +50,7 @@ import {
 } from "@/components/ui/collapsible";
 import { CargoImageUpload } from "./CargoImageUpload";
 import { OrderRouteMap } from "@/components/map/OrderRouteMap";
+import { GooglePlacesAutocomplete } from "@/components/navigation/GooglePlacesAutocomplete";
 
 // Central Asia regions and cities
 const centralAsiaData = {
@@ -130,6 +131,11 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
   const [pickupCity, setPickupCity] = useState("");
   const [deliveryRegion, setDeliveryRegion] = useState("");
   const [deliveryCity, setDeliveryCity] = useState("");
+
+  // Coordinate state for Google Places
+  const [pickupCoords, setPickupCoords] = useState<{ lat: number; lng: number; placeId: string } | null>(null);
+  const [deliveryCoords, setDeliveryCoords] = useState<{ lat: number; lng: number; placeId: string } | null>(null);
+
   const orderSchema = useMemo(() => z.object({
     cargo_type: z.string().min(2, t("orders.cargoType")),
     weight: z.string().optional(),
@@ -281,6 +287,13 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
       description: data.description || null,
       photo_urls: cargoImages.length > 0 ? cargoImages : null,
       client_price: data.client_price ? parseFloat(data.client_price) : null,
+      // Save coordinates from Google Places
+      pickup_lat: pickupCoords?.lat || null,
+      pickup_lng: pickupCoords?.lng || null,
+      pickup_place_id: pickupCoords?.placeId || null,
+      delivery_lat: deliveryCoords?.lat || null,
+      delivery_lng: deliveryCoords?.lng || null,
+      delivery_place_id: deliveryCoords?.placeId || null,
     }).select().single();
 
     if (orderData) {
@@ -329,6 +342,8 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
     setPickupCity("");
     setDeliveryRegion("");
     setDeliveryCity("");
+    setPickupCoords(null);
+    setDeliveryCoords(null);
     onSuccess?.();
   };
 
@@ -463,12 +478,25 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
-                      <Input 
-                        placeholder={t("orders.pickupAddress")} 
-                        {...field}
+                      <GooglePlacesAutocomplete
+                        value={field.value}
+                        onChange={field.onChange}
+                        onSelect={(details) => {
+                          field.onChange(details.formatted_address);
+                          setPickupCoords({
+                            lat: details.lat,
+                            lng: details.lng,
+                            placeId: details.place_id
+                          });
+                        }}
+                        placeholder={t("orders.pickupAddressFull") || "Полный адрес (улица, дом, ориентир)"}
+                        icon={<MapPin className="w-4 h-4" />}
                         className="bg-background"
                       />
                     </FormControl>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Начните вводить адрес для автоподсказок Google
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -521,12 +549,25 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
                 render={({ field }) => (
                   <FormItem>
                     <FormControl>
-                      <Input 
-                        placeholder={t("orders.deliveryAddress")} 
-                        {...field}
+                      <GooglePlacesAutocomplete
+                        value={field.value}
+                        onChange={field.onChange}
+                        onSelect={(details) => {
+                          field.onChange(details.formatted_address);
+                          setDeliveryCoords({
+                            lat: details.lat,
+                            lng: details.lng,
+                            placeId: details.place_id
+                          });
+                        }}
+                        placeholder={t("orders.deliveryAddressFull") || "Полный адрес (улица, дом, ориентир)"}
+                        icon={<MapPin className="w-4 h-4" />}
                         className="bg-background"
                       />
                     </FormControl>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Начните вводить адрес для автоподсказок Google
+                    </p>
                     <FormMessage />
                   </FormItem>
                 )}

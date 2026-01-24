@@ -544,6 +544,9 @@ export type Database = {
           client_price: number | null
           created_at: string
           delivery_address: string
+          delivery_lat: number | null
+          delivery_lng: number | null
+          delivery_place_id: string | null
           description: string | null
           height: number | null
           id: string
@@ -551,6 +554,9 @@ export type Database = {
           photo_urls: string[] | null
           pickup_address: string
           pickup_date: string
+          pickup_lat: number | null
+          pickup_lng: number | null
+          pickup_place_id: string | null
           status: Database["public"]["Enums"]["order_status"]
           updated_at: string
           weight: number | null
@@ -562,6 +568,9 @@ export type Database = {
           client_price?: number | null
           created_at?: string
           delivery_address: string
+          delivery_lat?: number | null
+          delivery_lng?: number | null
+          delivery_place_id?: string | null
           description?: string | null
           height?: number | null
           id?: string
@@ -569,6 +578,9 @@ export type Database = {
           photo_urls?: string[] | null
           pickup_address: string
           pickup_date: string
+          pickup_lat?: number | null
+          pickup_lng?: number | null
+          pickup_place_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           updated_at?: string
           weight?: number | null
@@ -580,6 +592,9 @@ export type Database = {
           client_price?: number | null
           created_at?: string
           delivery_address?: string
+          delivery_lat?: number | null
+          delivery_lng?: number | null
+          delivery_place_id?: string | null
           description?: string | null
           height?: number | null
           id?: string
@@ -587,6 +602,9 @@ export type Database = {
           photo_urls?: string[] | null
           pickup_address?: string
           pickup_date?: string
+          pickup_lat?: number | null
+          pickup_lng?: number | null
+          pickup_place_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           updated_at?: string
           weight?: number | null

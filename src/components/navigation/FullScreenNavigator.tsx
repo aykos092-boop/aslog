@@ -51,6 +51,8 @@ interface FullScreenNavigatorProps {
   pickupAddress: string;
   deliveryAddress: string;
   cargoType?: string;
+  pickupCoords?: { lat: number; lon: number };
+  deliveryCoords?: { lat: number; lon: number };
   onClose?: () => void;
 }
 
@@ -98,6 +100,8 @@ export const FullScreenNavigator = ({
   pickupAddress,
   deliveryAddress,
   cargoType,
+  pickupCoords: initialPickupCoords,
+  deliveryCoords: initialDeliveryCoords,
   onClose 
 }: FullScreenNavigatorProps) => {
   const navigate = useNavigate();
@@ -105,10 +109,14 @@ export const FullScreenNavigator = ({
   const { toast } = useToast();
   const voiceNav = useVoiceNavigation({ enabled: true });
   
-  // State
+  // State - initialize from props if coordinates provided
   const [currentPosition, setCurrentPosition] = useState<Coords | null>(null);
-  const [pickupCoords, setPickupCoords] = useState<Coords | null>(null);
-  const [deliveryCoords, setDeliveryCoords] = useState<Coords | null>(null);
+  const [pickupCoords, setPickupCoords] = useState<Coords | null>(
+    initialPickupCoords ? { lat: initialPickupCoords.lat, lng: initialPickupCoords.lon } : null
+  );
+  const [deliveryCoords, setDeliveryCoords] = useState<Coords | null>(
+    initialDeliveryCoords ? { lat: initialDeliveryCoords.lat, lng: initialDeliveryCoords.lon } : null
+  );
   const [routeData, setRouteData] = useState<RouteData | null>(null);
   const [loading, setLoading] = useState(true);
   const [routeLoading, setRouteLoading] = useState(false);
