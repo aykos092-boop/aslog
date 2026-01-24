@@ -129,16 +129,24 @@ export const LiveMap = ({ dealId, carrierName, pickupCoords, deliveryCoords }: L
 
     // Initialize map
     if (!mapRef.current) {
-      mapRef.current = L.map(mapContainerRef.current, {
+      const map = L.map(mapContainerRef.current, {
         zoomControl: true,
         scrollWheelZoom: true,
         attributionControl: false,
       }).setView([41.3, 64.5], 10);
 
+      mapRef.current = map;
+
       // Apple-style map tiles
       L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
         maxZoom: 19,
-      }).addTo(mapRef.current);
+        subdomains: "abcd",
+      }).addTo(map);
+
+      // Force invalidate size after mount
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 100);
     }
 
     const map = mapRef.current;
@@ -316,6 +324,9 @@ export const LiveMap = ({ dealId, carrierName, pickupCoords, deliveryCoords }: L
     if (allPoints.length > 0) {
       const bounds = L.latLngBounds(allPoints);
       map.fitBounds(bounds, { padding: [50, 50] });
+      
+      // Invalidate size after fitting bounds
+      setTimeout(() => map.invalidateSize(), 100);
     }
 
     return () => {};

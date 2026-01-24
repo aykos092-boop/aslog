@@ -185,55 +185,66 @@ const UnifiedNavigator = () => {
 
   // Initialize map
   useEffect(() => {
-    if (!mapContainerRef.current || mapRef.current) return;
-
-    mapRef.current = L.map(mapContainerRef.current, {
-      zoomControl: false,
-      attributionControl: false,
-    }).setView([41.3, 69.3], 12);
-
-    const tileConfig = mapTileUrls[mapStyle];
-    L.tileLayer(tileConfig.url, {
-      maxZoom: 19,
-      subdomains: tileConfig.subdomains || undefined,
-    }).addTo(mapRef.current);
-
-    L.control.zoom({ position: "bottomright" }).addTo(mapRef.current);
-
-    // Get current location
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          setCurrentPosition(coords);
-          mapRef.current?.setView([coords.lat, coords.lng], 14);
-        },
-        () => console.log("Geolocation not available")
-      );
+    if (!mapContainerRef.current) return;
+    
+    // Cleanup existing map first
+    if (mapRef.current) {
+      mapRef.current.remove();
+      mapRef.current = null;
     }
 
+    // Small delay to ensure container is properly sized
+    const initTimer = setTimeout(() => {
+      if (!mapContainerRef.current) return;
+
+      const map = L.map(mapContainerRef.current, {
+        zoomControl: false,
+        attributionControl: false,
+      }).setView([41.3, 69.3], 12);
+
+      mapRef.current = map;
+
+      const tileConfig = mapTileUrls[mapStyle];
+      L.tileLayer(tileConfig.url, {
+        maxZoom: 19,
+        subdomains: tileConfig.subdomains || undefined,
+      }).addTo(map);
+
+      L.control.zoom({ position: "bottomright" }).addTo(map);
+
+      // Force invalidate size after render
+      setTimeout(() => {
+        map.invalidateSize();
+      }, 100);
+
+      // Get current location
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+            setCurrentPosition(coords);
+            map.setView([coords.lat, coords.lng], 14);
+            
+            // Invalidate size again after location change
+            setTimeout(() => map.invalidateSize(), 50);
+          },
+          (err) => {
+            console.log("Geolocation not available:", err.message);
+          }
+        );
+      }
+    }, 50);
+
     return () => {
+      clearTimeout(initTimer);
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;
       }
     };
-  }, []);
-
-  // Update map style
-  useEffect(() => {
-    if (!mapRef.current) return;
-    mapRef.current.eachLayer((layer) => {
-      if (layer instanceof L.TileLayer) {
-        mapRef.current!.removeLayer(layer);
-      }
-    });
-    const tileConfig = mapTileUrls[mapStyle];
-    L.tileLayer(tileConfig.url, {
-      maxZoom: 19,
-      subdomains: tileConfig.subdomains || undefined,
-    }).addTo(mapRef.current);
   }, [mapStyle]);
+
+  // Update map style is now handled in init effect
 
   // Load order/deal data automatically
   useEffect(() => {
@@ -339,8 +350,14 @@ const UnifiedNavigator = () => {
           }
         }
 
-        // Auto-build route after data loaded
-        setTimeout(() => buildRoute(), 300);
+        // Auto-build route after data loaded with delay for map init
+        setTimeout(() => {
+          // Ensure map is properly sized before building route
+          if (mapRef.current) {
+            mapRef.current.invalidateSize();
+          }
+          buildRoute();
+        }, 500);
 
       } catch (err) {
         console.error("Error loading data:", err);
@@ -506,6 +523,9 @@ const UnifiedNavigator = () => {
 
       // Fit bounds
       mapRef.current.fitBounds(mainLine.getBounds(), { padding: [60, 60] });
+      
+      // Force invalidate size after drawing
+      setTimeout(() => mapRef.current?.invalidateSize(), 100);
 
       // Markers
       const startPoint = selectedRoute.points[0];
@@ -626,6 +646,15 @@ const UnifiedNavigator = () => {
     updateVoiceSettings(newSettings.gender, newSettings.rate);
   }, [updateVoiceSettings]);
 
+  // Resize map when loading finishes
+  useEffect(() => {
+    if (!loading && mapRef.current) {
+      setTimeout(() => {
+        mapRef.current?.invalidateSize();
+      }, 200);
+    }
+  }, [loading]);
+
   // Cleanup
   useEffect(() => {
     return () => {
@@ -711,8 +740,12 @@ const UnifiedNavigator = () => {
       </header>
 
       {/* Map - Full screen */}
-      <div className="flex-1 relative">
-        <div ref={mapContainerRef} className="absolute inset-0" />
+      <div className="flex-1 relative overflow-hidden">
+        <div 
+          ref={mapContainerRef} 
+          className="absolute inset-0 z-0"
+          style={{ minHeight: '200px' }}
+        />
 
         {/* Speed Camera Overlay */}
         {nearbyCamera && (

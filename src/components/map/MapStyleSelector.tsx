@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { Map, Sun, Moon, Satellite } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,40 +30,46 @@ export const mapTileUrls: Record<MapStyle, { url: string; subdomains?: string }>
   },
 };
 
-export const MapStyleSelector = ({ value, onChange, className }: MapStyleSelectorProps) => {
-  const styles = [
-    { id: "light" as const, icon: Sun, label: "Светлая" },
-    { id: "dark" as const, icon: Moon, label: "Тёмная" },
-    { id: "satellite" as const, icon: Satellite, label: "Спутник" },
-  ];
+export const MapStyleSelector = forwardRef<HTMLDivElement, MapStyleSelectorProps>(
+  ({ value, onChange, className }, ref) => {
+    const styles = [
+      { id: "light" as const, icon: Sun, label: "Светлая" },
+      { id: "dark" as const, icon: Moon, label: "Тёмная" },
+      { id: "satellite" as const, icon: Satellite, label: "Спутник" },
+    ];
 
-  const currentStyle = styles.find(s => s.id === value) || styles[0];
-  const CurrentIcon = currentStyle.icon;
+    const currentStyle = styles.find(s => s.id === value) || styles[0];
+    const CurrentIcon = currentStyle.icon;
 
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="secondary" size="sm" className={`gap-2 ${className}`}>
-          <CurrentIcon className="w-4 h-4" />
-          <Map className="w-3 h-3" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        {styles.map((style) => {
-          const Icon = style.icon;
-          return (
-            <DropdownMenuItem 
-              key={style.id} 
-              onClick={() => onChange(style.id)}
-              className="gap-2"
-            >
-              <Icon className="h-4 w-4" />
-              <span>{style.label}</span>
-              {value === style.id && <span className="ml-auto text-primary">✓</span>}
-            </DropdownMenuItem>
-          );
-        })}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-};
+    return (
+      <div ref={ref}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="secondary" size="sm" className={`gap-2 ${className}`}>
+              <CurrentIcon className="w-4 h-4" />
+              <Map className="w-3 h-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {styles.map((style) => {
+              const Icon = style.icon;
+              return (
+                <DropdownMenuItem 
+                  key={style.id} 
+                  onClick={() => onChange(style.id)}
+                  className="gap-2"
+                >
+                  <Icon className="h-4 w-4" />
+                  <span>{style.label}</span>
+                  {value === style.id && <span className="ml-auto text-primary">✓</span>}
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    );
+  }
+);
+
+MapStyleSelector.displayName = "MapStyleSelector";

@@ -322,6 +322,30 @@ export type Database = {
         }
         Relationships: []
       }
+      firebase_user_roles: {
+        Row: {
+          created_at: string
+          firebase_uid: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          firebase_uid: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          firebase_uid?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       geocode_cache: {
         Row: {
           address: string
@@ -964,6 +988,7 @@ export type Database = {
           date_of_birth: string | null
           device_fingerprint: string | null
           email_verified: boolean | null
+          firebase_uid: string | null
           fraud_score: number | null
           full_name: string | null
           id: string
@@ -991,6 +1016,7 @@ export type Database = {
           date_of_birth?: string | null
           device_fingerprint?: string | null
           email_verified?: boolean | null
+          firebase_uid?: string | null
           fraud_score?: number | null
           full_name?: string | null
           id?: string
@@ -1018,6 +1044,7 @@ export type Database = {
           date_of_birth?: string | null
           device_fingerprint?: string | null
           email_verified?: boolean | null
+          firebase_uid?: string | null
           fraud_score?: number | null
           full_name?: string | null
           id?: string
