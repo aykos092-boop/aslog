@@ -1,3 +1,4 @@
+import { forwardRef } from "react";
 import { ExternalLink, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,13 +24,13 @@ const translations = {
   appleMaps: "Apple Maps",
 };
 
-export const OpenInGoogleMapsButton = ({
+export const OpenInGoogleMapsButton = forwardRef<HTMLButtonElement, OpenInGoogleMapsButtonProps>(({
   origin,
   destination,
   travelMode = "driving",
   waypoints = [],
   className,
-}: OpenInGoogleMapsButtonProps) => {
+}, ref) => {
   // Convert travel mode to Google Maps format
   const getGoogleTravelMode = (): string => {
     switch (travelMode) {
@@ -118,7 +119,7 @@ export const OpenInGoogleMapsButton = ({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className={className}>
+        <Button ref={ref} variant="outline" size="sm" className={className}>
           <ExternalLink className="h-4 w-4 mr-2" />
           {translations.openExternal}
         </Button>
@@ -143,4 +144,6 @@ export const OpenInGoogleMapsButton = ({
       </DropdownMenuContent>
     </DropdownMenu>
   );
-};
+});
+
+OpenInGoogleMapsButton.displayName = "OpenInGoogleMapsButton";

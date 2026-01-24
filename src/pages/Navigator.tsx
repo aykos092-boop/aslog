@@ -192,6 +192,8 @@ const Navigator = () => {
   const [currentPosition, setCurrentPosition] = useState<Coords | null>(null);
   const [autoRouteBuilt, setAutoRouteBuilt] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [orderFromCoords, setOrderFromCoords] = useState<Coords | null>(null);
+  const [orderToCoords, setOrderToCoords] = useState<Coords | null>(null);
   
   // Voice settings state
   const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>({
@@ -317,6 +319,14 @@ const Navigator = () => {
         if (orderData) {
           setFromAddress(orderData.pickup_address || "");
           setToAddress(orderData.delivery_address || "");
+
+          // Prefer building routes directly to coordinates when available
+          if (orderData.pickup_lat && orderData.pickup_lng) {
+            setOrderFromCoords({ lat: orderData.pickup_lat, lng: orderData.pickup_lng });
+          }
+          if (orderData.delivery_lat && orderData.delivery_lng) {
+            setOrderToCoords({ lat: orderData.delivery_lat, lng: orderData.delivery_lng });
+          }
           
           console.log("Order data loaded:", orderData);
         } else {
@@ -480,8 +490,8 @@ const Navigator = () => {
     try {
       const { data, error: fnError } = await supabase.functions.invoke("google-directions", {
         body: {
-          origin: fromAddress,
-          destination: toAddress,
+          origin: orderFromCoords ?? fromAddress,
+          destination: orderToCoords ?? toAddress,
           mode: travelMode,
           alternatives: true,
           language: language === "uz" ? "ru" : language,
@@ -516,7 +526,16 @@ const Navigator = () => {
     } finally {
       setLoading(false);
     }
-  }, [fromAddress, toAddress, travelMode, language, toast, t, drawRoutes]);
+  }, [fromAddress, toAddress, orderFromCoords, orderToCoords, travelMode, language, toast, t, drawRoutes]);
+
+  const handleBack = useCallback(() => {
+    // If user opened /navigator/:id directly, history back can be a no-op
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate("/dashboard");
+    }
+  }, [navigate]);
 
   // Define selectedRoute early so it can be used in callbacks
   const selectedRoute = routes[selectedRouteIndex];
@@ -730,18 +749,18 @@ const Navigator = () => {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex bg-background">
+    <div className="fixed inset-0 z-50 flex flex-col sm:flex-row bg-background">
       {/* Left Panel */}
       <div 
         className={cn(
-          "h-full bg-background border-r shadow-xl flex flex-col transition-all duration-300 z-10",
-          panelCollapsed ? "w-0 overflow-hidden" : "w-full sm:w-[400px]"
+          "bg-background border-b sm:border-b-0 sm:border-r shadow-xl flex flex-col transition-all duration-300 z-10",
+          panelCollapsed ? "h-0 overflow-hidden sm:h-full sm:w-0" : "w-full sm:w-[400px]"
         )}
       >
         {/* Header */}
         <div className="p-4 border-b bg-card shrink-0">
           <div className="flex items-center gap-3 mb-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+            <Button variant="ghost" size="icon" onClick={handleBack}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <h1 className="text-xl font-bold flex items-center gap-2">
@@ -1061,16 +1080,16 @@ const Navigator = () => {
       {/* Panel Toggle (mobile) */}
       <button
         className={cn(
-          "absolute left-0 top-1/2 -translate-y-1/2 z-20 bg-background border rounded-r-lg p-2 shadow-lg sm:hidden",
-          panelCollapsed ? "left-0" : "left-[100%] sm:left-[400px]"
+          "absolute left-1/2 -translate-x-1/2 z-20 bg-background border rounded-b-lg p-2 shadow-lg sm:hidden",
+          panelCollapsed ? "top-0" : "top-[calc(100%-1px)]"
         )}
         onClick={() => setPanelCollapsed(!panelCollapsed)}
       >
-        {panelCollapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronDown className="h-5 w-5 rotate-90" />}
+        {panelCollapsed ? <ChevronDown className="h-5 w-5" /> : <ChevronUp className="h-5 w-5" />}
       </button>
 
       {/* Map */}
-      <div className="flex-1 relative min-h-[400px] h-full">
+      <div className="flex-1 relative min-h-[320px] sm:min-h-0">
         <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" />
 
         {/* Map Controls */}
