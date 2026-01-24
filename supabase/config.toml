@@ -38,3 +38,18 @@ verify_jwt = false
 
 [functions.kyc-notification]
 verify_jwt = false
+
+[functions.telegram-otp]
+verify_jwt = false
+
+[functions.kyc-ai-verify]
+verify_jwt = false
+
+[functions.password-reset]
+verify_jwt = false
+
+[functions.google-places-autocomplete]
+verify_jwt = false
+
+[functions.google-place-details]
+verify_jwt = false

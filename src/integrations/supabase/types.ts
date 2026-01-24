@@ -131,6 +131,45 @@ export type Database = {
         }
         Relationships: []
       }
+      balance_transactions: {
+        Row: {
+          admin_id: string | null
+          amount: number
+          created_at: string | null
+          description: string | null
+          id: string
+          reference_id: string | null
+          reference_type: string | null
+          status: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          admin_id?: string | null
+          amount: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          status?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          admin_id?: string | null
+          amount?: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          reference_id?: string | null
+          reference_type?: string | null
+          status?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       carrier_preferences: {
         Row: {
           carrier_id: string
@@ -216,6 +255,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      device_fingerprints: {
+        Row: {
+          city: string | null
+          country: string | null
+          fingerprint: string
+          first_seen_at: string | null
+          id: string
+          ip_address: string | null
+          is_suspicious: boolean | null
+          is_vpn: boolean | null
+          last_seen_at: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          city?: string | null
+          country?: string | null
+          fingerprint: string
+          first_seen_at?: string | null
+          id?: string
+          ip_address?: string | null
+          is_suspicious?: boolean | null
+          is_vpn?: boolean | null
+          last_seen_at?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          city?: string | null
+          country?: string | null
+          fingerprint?: string
+          first_seen_at?: string | null
+          id?: string
+          ip_address?: string | null
+          is_suspicious?: boolean | null
+          is_vpn?: boolean | null
+          last_seen_at?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
       }
       favorite_carriers: {
         Row: {
@@ -314,17 +395,38 @@ export type Database = {
       }
       kyc_documents: {
         Row: {
+          address: string | null
+          admin_notes: string | null
+          auto_verified: boolean | null
           created_at: string
+          data_match_score: number | null
+          date_of_birth: string | null
           document_authenticity_score: number | null
           extracted_data: Json | null
           face_match_score: number | null
+          first_name: string | null
           id: string
+          last_name: string | null
           liveness_score: number | null
+          middle_name: string | null
+          ocr_confidence: number | null
+          ocr_extracted_country: string | null
+          ocr_extracted_dob: string | null
+          ocr_extracted_expiry: string | null
+          ocr_extracted_name: string | null
+          ocr_extracted_passport_number: string | null
+          ocr_extracted_surname: string | null
+          ocr_raw_data: Json | null
           passport_back_url: string | null
+          passport_country: string | null
+          passport_expiry: string | null
           passport_front_url: string | null
+          passport_number: string | null
+          passport_series: string | null
           rejection_reason: string | null
           reviewed_at: string | null
           reviewed_by: string | null
+          risk_level: string | null
           selfie_url: string | null
           status: Database["public"]["Enums"]["kyc_status"]
           updated_at: string
@@ -332,17 +434,38 @@ export type Database = {
           video_selfie_url: string | null
         }
         Insert: {
+          address?: string | null
+          admin_notes?: string | null
+          auto_verified?: boolean | null
           created_at?: string
+          data_match_score?: number | null
+          date_of_birth?: string | null
           document_authenticity_score?: number | null
           extracted_data?: Json | null
           face_match_score?: number | null
+          first_name?: string | null
           id?: string
+          last_name?: string | null
           liveness_score?: number | null
+          middle_name?: string | null
+          ocr_confidence?: number | null
+          ocr_extracted_country?: string | null
+          ocr_extracted_dob?: string | null
+          ocr_extracted_expiry?: string | null
+          ocr_extracted_name?: string | null
+          ocr_extracted_passport_number?: string | null
+          ocr_extracted_surname?: string | null
+          ocr_raw_data?: Json | null
           passport_back_url?: string | null
+          passport_country?: string | null
+          passport_expiry?: string | null
           passport_front_url?: string | null
+          passport_number?: string | null
+          passport_series?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          risk_level?: string | null
           selfie_url?: string | null
           status?: Database["public"]["Enums"]["kyc_status"]
           updated_at?: string
@@ -350,17 +473,38 @@ export type Database = {
           video_selfie_url?: string | null
         }
         Update: {
+          address?: string | null
+          admin_notes?: string | null
+          auto_verified?: boolean | null
           created_at?: string
+          data_match_score?: number | null
+          date_of_birth?: string | null
           document_authenticity_score?: number | null
           extracted_data?: Json | null
           face_match_score?: number | null
+          first_name?: string | null
           id?: string
+          last_name?: string | null
           liveness_score?: number | null
+          middle_name?: string | null
+          ocr_confidence?: number | null
+          ocr_extracted_country?: string | null
+          ocr_extracted_dob?: string | null
+          ocr_extracted_expiry?: string | null
+          ocr_extracted_name?: string | null
+          ocr_extracted_passport_number?: string | null
+          ocr_extracted_surname?: string | null
+          ocr_raw_data?: Json | null
           passport_back_url?: string | null
+          passport_country?: string | null
+          passport_expiry?: string | null
           passport_front_url?: string | null
+          passport_number?: string | null
+          passport_series?: string | null
           rejection_reason?: string | null
           reviewed_at?: string | null
           reviewed_by?: string | null
+          risk_level?: string | null
           selfie_url?: string | null
           status?: Database["public"]["Enums"]["kyc_status"]
           updated_at?: string
@@ -612,6 +756,54 @@ export type Database = {
         }
         Relationships: []
       }
+      otp_codes: {
+        Row: {
+          attempts: number | null
+          code: string
+          created_at: string | null
+          email: string | null
+          expires_at: string
+          id: string
+          max_attempts: number | null
+          phone: string | null
+          telegram_chat_id: string | null
+          type: string
+          updated_at: string | null
+          user_id: string | null
+          verified: boolean | null
+        }
+        Insert: {
+          attempts?: number | null
+          code: string
+          created_at?: string | null
+          email?: string | null
+          expires_at: string
+          id?: string
+          max_attempts?: number | null
+          phone?: string | null
+          telegram_chat_id?: string | null
+          type: string
+          updated_at?: string | null
+          user_id?: string | null
+          verified?: boolean | null
+        }
+        Update: {
+          attempts?: number | null
+          code?: string
+          created_at?: string | null
+          email?: string | null
+          expires_at?: string
+          id?: string
+          max_attempts?: number | null
+          phone?: string | null
+          telegram_chat_id?: string | null
+          type?: string
+          updated_at?: string | null
+          user_id?: string | null
+          verified?: boolean | null
+        }
+        Relationships: []
+      }
       partner_api_keys: {
         Row: {
           api_key: string
@@ -686,6 +878,33 @@ export type Database = {
           },
         ]
       }
+      password_reset_tokens: {
+        Row: {
+          created_at: string | null
+          expires_at: string
+          id: string
+          token: string
+          used: boolean | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          token: string
+          used?: boolean | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          token?: string
+          used?: boolean | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       price_negotiations: {
         Row: {
           created_at: string
@@ -736,43 +955,82 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address: string | null
           avatar_url: string | null
+          balance: number | null
           carrier_type: Database["public"]["Enums"]["carrier_type"] | null
           company_name: string | null
           created_at: string
+          date_of_birth: string | null
+          device_fingerprint: string | null
+          email_verified: boolean | null
+          fraud_score: number | null
           full_name: string | null
           id: string
           is_verified: boolean | null
+          last_ip: string | null
+          locked_until: string | null
+          login_attempts: number | null
+          passport_number_hash: string | null
+          passport_series: string | null
           phone: string | null
+          phone_verified: boolean | null
           referral_code: string | null
+          subscription_plan: string | null
           updated_at: string
           user_id: string
           vehicle_type: string | null
         }
         Insert: {
+          address?: string | null
           avatar_url?: string | null
+          balance?: number | null
           carrier_type?: Database["public"]["Enums"]["carrier_type"] | null
           company_name?: string | null
           created_at?: string
+          date_of_birth?: string | null
+          device_fingerprint?: string | null
+          email_verified?: boolean | null
+          fraud_score?: number | null
           full_name?: string | null
           id?: string
           is_verified?: boolean | null
+          last_ip?: string | null
+          locked_until?: string | null
+          login_attempts?: number | null
+          passport_number_hash?: string | null
+          passport_series?: string | null
           phone?: string | null
+          phone_verified?: boolean | null
           referral_code?: string | null
+          subscription_plan?: string | null
           updated_at?: string
           user_id: string
           vehicle_type?: string | null
         }
         Update: {
+          address?: string | null
           avatar_url?: string | null
+          balance?: number | null
           carrier_type?: Database["public"]["Enums"]["carrier_type"] | null
           company_name?: string | null
           created_at?: string
+          date_of_birth?: string | null
+          device_fingerprint?: string | null
+          email_verified?: boolean | null
+          fraud_score?: number | null
           full_name?: string | null
           id?: string
           is_verified?: boolean | null
+          last_ip?: string | null
+          locked_until?: string | null
+          login_attempts?: number | null
+          passport_number_hash?: string | null
+          passport_series?: string | null
           phone?: string | null
+          phone_verified?: boolean | null
           referral_code?: string | null
+          subscription_plan?: string | null
           updated_at?: string
           user_id?: string
           vehicle_type?: string | null
@@ -1062,6 +1320,126 @@ export type Database = {
           },
         ]
       }
+      security_events: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          device_fingerprint: string | null
+          event_type: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          severity: string | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          device_fingerprint?: string | null
+          event_type: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          severity?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          device_fingerprint?: string | null
+          event_type?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          severity?: string | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      subscription_plans: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          display_name: string
+          features: Json | null
+          id: string
+          is_active: boolean | null
+          limits: Json | null
+          name: string
+          price_monthly: number
+          price_yearly: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          display_name: string
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          limits?: Json | null
+          name: string
+          price_monthly: number
+          price_yearly?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          display_name?: string
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          limits?: Json | null
+          name?: string
+          price_monthly?: number
+          price_yearly?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      telegram_users: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_verified: boolean | null
+          phone: string | null
+          telegram_first_name: string | null
+          telegram_id: string
+          telegram_last_name: string | null
+          telegram_username: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_verified?: boolean | null
+          phone?: string | null
+          telegram_first_name?: string | null
+          telegram_id: string
+          telegram_last_name?: string | null
+          telegram_username?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_verified?: boolean | null
+          phone?: string | null
+          telegram_first_name?: string | null
+          telegram_id?: string
+          telegram_last_name?: string | null
+          telegram_username?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1082,6 +1460,56 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      user_subscriptions: {
+        Row: {
+          cancel_at_period_end: boolean | null
+          created_at: string | null
+          current_period_end: string | null
+          current_period_start: string | null
+          id: string
+          payme_subscription_id: string | null
+          plan_id: string
+          status: string | null
+          stripe_subscription_id: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          cancel_at_period_end?: boolean | null
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          payme_subscription_id?: string | null
+          plan_id: string
+          status?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          cancel_at_period_end?: boolean | null
+          created_at?: string | null
+          current_period_end?: string | null
+          current_period_start?: string | null
+          id?: string
+          payme_subscription_id?: string | null
+          plan_id?: string
+          status?: string | null
+          stripe_subscription_id?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_subscriptions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_plans"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
