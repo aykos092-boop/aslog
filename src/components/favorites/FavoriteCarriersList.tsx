@@ -143,7 +143,7 @@ export const FavoriteCarriersList = () => {
               Добавляйте перевозчиков после успешных сделок
             </p>
           </div> : <div className="space-y-4">
-            {favorites.map(fav => <div key={fav.id} className="items-center gap-4 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors flex flex-col">
+            {favorites.map(fav => <div key={fav.id} className="items-center gap-4 p-4 rounded-lg border bg-card hover:bg-accent/50 transition-colors flex flex-row">
                 <Avatar className="h-12 w-12 cursor-pointer" onClick={() => navigate(`/profile/${fav.carrier_id}`)}>
                   <AvatarImage src={fav.profile.avatar_url || undefined} />
                   <AvatarFallback>
