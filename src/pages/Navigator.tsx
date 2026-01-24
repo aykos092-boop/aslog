@@ -1070,8 +1070,8 @@ const Navigator = () => {
       </button>
 
       {/* Map */}
-      <div className="flex-1 relative">
-        <div ref={mapContainerRef} className="w-full h-full" />
+      <div className="flex-1 relative min-h-[400px]">
+        <div ref={mapContainerRef} className="absolute inset-0" />
 
         {/* Map Controls */}
         <div className="absolute top-4 right-4 flex flex-col gap-2">
