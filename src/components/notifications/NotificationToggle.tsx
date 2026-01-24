@@ -1,10 +1,12 @@
 import { Bell, BellOff, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export const NotificationToggle = () => {
   const { isSupported, isSubscribed, isLoading, subscribe, unsubscribe } =
     usePushNotifications();
+  const { t } = useLanguage();
 
   if (!isSupported) {
     return null;
@@ -22,12 +24,12 @@ export const NotificationToggle = () => {
       ) : isSubscribed ? (
         <>
           <Bell className="w-4 h-4 mr-2" />
-          Уведомления вкл
+          {t("notificationToggle.enabled")}
         </>
       ) : (
         <>
           <BellOff className="w-4 h-4 mr-2" />
-          Включить уведомления
+          {t("notificationToggle.enable")}
         </>
       )}
     </Button>

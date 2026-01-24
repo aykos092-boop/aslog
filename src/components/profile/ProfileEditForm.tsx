@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { Camera, Loader2, Save, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +39,7 @@ export const ProfileEditForm = ({
   onCancel,
 }: ProfileEditFormProps) => {
   const { toast } = useToast();
+  const { t } = useLanguage();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
@@ -61,8 +63,8 @@ export const ProfileEditForm = ({
     // Validate file
     if (!file.type.startsWith("image/")) {
       toast({
-        title: "Неверный формат",
-        description: "Пожалуйста, выберите изображение",
+        title: t("profile.wrongFormat"),
+        description: t("profile.selectImage"),
         variant: "destructive",
       });
       return;
@@ -70,8 +72,8 @@ export const ProfileEditForm = ({
 
     if (file.size > 5 * 1024 * 1024) {
       toast({
-        title: "Файл слишком большой",
-        description: "Максимальный размер файла — 5 МБ",
+        title: t("profile.fileTooLarge"),
+        description: t("profile.maxFileSize"),
         variant: "destructive",
       });
       return;
@@ -106,14 +108,14 @@ export const ProfileEditForm = ({
         .eq("user_id", profile.user_id);
 
       toast({
-        title: "Аватар обновлён",
-        description: "Новое фото профиля сохранено",
+        title: t("profile.avatarUpdated"),
+        description: t("profile.newPhotoSaved"),
       });
     } catch (error) {
       console.error("Upload error:", error);
       toast({
-        title: "Ошибка загрузки",
-        description: "Не удалось загрузить изображение",
+        title: t("profile.uploadError"),
+        description: t("profile.uploadFailed"),
         variant: "destructive",
       });
     } finally {
@@ -137,15 +139,15 @@ export const ProfileEditForm = ({
 
     if (error) {
       toast({
-        title: "Ошибка",
-        description: "Не удалось сохранить изменения",
+        title: t("common.error"),
+        description: t("profile.saveFailed"),
         variant: "destructive",
       });
       console.error("Update error:", error);
     } else {
       toast({
-        title: "Профиль обновлён",
-        description: "Изменения успешно сохранены",
+        title: t("profile.profileUpdated"),
+        description: t("profile.changesSaved"),
       });
       onUpdate();
     }
@@ -158,10 +160,10 @@ export const ProfileEditForm = ({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <User className="w-5 h-5" />
-          Редактирование профиля
+          {t("profile.editProfile")}
         </CardTitle>
         <CardDescription>
-          Обновите информацию о себе
+          {t("profile.updateInfo")}
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -199,24 +201,24 @@ export const ProfileEditForm = ({
               />
             </div>
             <p className="text-sm text-muted-foreground">
-              Нажмите для загрузки фото
+              {t("profile.clickToUpload")}
             </p>
           </div>
 
           {/* Name */}
           <div className="space-y-2">
-            <Label htmlFor="full_name">Имя</Label>
+            <Label htmlFor="full_name">{t("profile.name")}</Label>
             <Input
               id="full_name"
               value={formData.full_name}
               onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-              placeholder="Ваше имя"
+              placeholder={t("auth.namePlaceholder")}
             />
           </div>
 
           {/* Phone */}
           <div className="space-y-2">
-            <Label htmlFor="phone">Телефон</Label>
+            <Label htmlFor="phone">{t("profile.phone")}</Label>
             <Input
               id="phone"
               type="tel"
@@ -230,7 +232,7 @@ export const ProfileEditForm = ({
           {isCarrier && (
             <>
               <div className="space-y-2">
-                <Label htmlFor="company_name">Название компании</Label>
+                <Label htmlFor="company_name">{t("profile.companyName")}</Label>
                 <Input
                   id="company_name"
                   value={formData.company_name}
@@ -240,7 +242,7 @@ export const ProfileEditForm = ({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="vehicle_type">Тип транспорта</Label>
+                <Label htmlFor="vehicle_type">{t("profile.vehicleType")}</Label>
                 <Textarea
                   id="vehicle_type"
                   value={formData.vehicle_type}
@@ -258,17 +260,17 @@ export const ProfileEditForm = ({
               {saving ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Сохранение...
+                  {t("profile.saving")}
                 </>
               ) : (
                 <>
                   <Save className="w-4 h-4 mr-2" />
-                  Сохранить
+                  {t("common.save")}
                 </>
               )}
             </Button>
             <Button type="button" variant="outline" onClick={onCancel} disabled={saving}>
-              Отмена
+              {t("common.cancel")}
             </Button>
           </div>
         </form>

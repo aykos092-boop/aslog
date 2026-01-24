@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAIChat } from "@/hooks/useAIChat";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
 
 export const AIChatBot = () => {
@@ -11,6 +12,7 @@ export const AIChatBot = () => {
   const [input, setInput] = useState("");
   const [hoveredRating, setHoveredRating] = useState(0);
   const { messages, isLoading, sendMessage, clearMessages, historyLoaded, canRate, rateResponse } = useAIChat();
+  const { t } = useLanguage();
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -29,9 +31,9 @@ export const AIChatBot = () => {
   };
 
   const quickQuestions = [
-    "Как рассчитать стоимость?",
-    "Какой перевозчик лучше?",
-    "Сколько стоит срочная доставка?",
+    t("aiChat.quickQuestion1"),
+    t("aiChat.quickQuestion2"),
+    t("aiChat.quickQuestion3"),
   ];
 
   return (
@@ -57,8 +59,8 @@ export const AIChatBot = () => {
             <div className="flex items-center gap-2">
               <Bot className="h-5 w-5" />
               <div>
-                <h3 className="font-semibold text-sm">AI Помощник</h3>
-                <p className="text-xs opacity-80">Выбор перевозчика и расчёт</p>
+                <h3 className="font-semibold text-sm">{t("aiChat.title")}</h3>
+                <p className="text-xs opacity-80">{t("aiChat.subtitle")}</p>
               </div>
             </div>
             <div className="flex items-center gap-1">
@@ -67,7 +69,7 @@ export const AIChatBot = () => {
                 size="icon"
                 className="h-8 w-8 text-primary-foreground hover:bg-primary-foreground/20"
                 onClick={clearMessages}
-                title="Очистить чат"
+                title={t("aiChat.clearChat")}
               >
                 <Trash2 className="h-4 w-4" />
               </Button>
@@ -89,7 +91,7 @@ export const AIChatBot = () => {
                 <div className="text-center py-6">
                   <Bot className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
                   <p className="text-sm text-muted-foreground mb-4">
-                    Привет! Я помогу выбрать перевозчика и рассчитать стоимость доставки.
+                    {t("aiChat.greeting")}
                   </p>
                   <div className="flex flex-wrap gap-2 justify-center">
                     {quickQuestions.map((q) => (
@@ -110,7 +112,7 @@ export const AIChatBot = () => {
               {messages.length > 0 && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
                   <History className="h-3 w-3" />
-                  <span>История сохраняется автоматически</span>
+                  <span>{t("aiChat.historySaved")}</span>
                 </div>
               )}
 
@@ -163,7 +165,7 @@ export const AIChatBot = () => {
               {/* Rating prompt */}
               {canRate && !isLoading && messages.length > 0 && messages[messages.length - 1]?.role === "assistant" && (
                 <div className="flex items-center justify-center gap-2 py-2 px-3 bg-muted/50 rounded-lg">
-                  <span className="text-xs text-muted-foreground">Оцените ответ:</span>
+                  <span className="text-xs text-muted-foreground">{t("aiChat.rateResponse")}</span>
                   <div className="flex gap-1">
                     {[1, 2, 3, 4, 5].map((rating) => (
                       <button
@@ -196,7 +198,7 @@ export const AIChatBot = () => {
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Задайте вопрос..."
+              placeholder={t("aiChat.askQuestion")}
               disabled={isLoading}
               className="flex-1"
             />

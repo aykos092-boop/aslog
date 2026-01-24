@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, differenceInHours } from "date-fns";
-import { ru } from "date-fns/locale";
-import { Package, MapPin, Calendar, Weight, Ruler, MessageSquare, Eye, Loader2, Pencil, X, Image as ImageIcon } from "lucide-react";
+import { ru, enUS } from "date-fns/locale";
+import { Package, MapPin, Calendar, Weight, Ruler, MessageSquare, Eye, Loader2, X, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,14 +16,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,13 +44,6 @@ interface Order {
   responses_count?: number;
 }
 
-const statusConfig = {
-  open: { label: "Открыта", variant: "default" as const, className: "bg-driver text-white" },
-  in_progress: { label: "В работе", variant: "default" as const, className: "bg-customer text-white" },
-  completed: { label: "Завершена", variant: "default" as const, className: "bg-gold text-white" },
-  cancelled: { label: "Отменена", variant: "secondary" as const, className: "" },
-};
-
 interface OrdersListProps {
   refreshTrigger?: number;
 }
@@ -66,11 +52,21 @@ export const OrdersList = ({ refreshTrigger }: OrdersListProps) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { t, language } = useLanguage();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [cancelling, setCancelling] = useState(false);
+
+  const dateLocale = language === "ru" ? ru : language === "uz" ? ru : enUS;
+
+  const statusConfig = {
+    open: { label: t("orders.status.open"), variant: "default" as const, className: "bg-driver text-white" },
+    in_progress: { label: t("orders.status.in_progress"), variant: "default" as const, className: "bg-customer text-white" },
+    completed: { label: t("orders.status.completed"), variant: "default" as const, className: "bg-gold text-white" },
+    cancelled: { label: t("orders.status.cancelled"), variant: "secondary" as const, className: "" },
+  };
 
   const fetchOrders = async () => {
     if (!user) return;
@@ -128,14 +124,14 @@ export const OrdersList = ({ refreshTrigger }: OrdersListProps) => {
 
     if (error) {
       toast({
-        title: "Ошибка",
-        description: "Не удалось отменить заявку",
+        title: t("common.error"),
+        description: t("ordersList.cancelFailed"),
         variant: "destructive",
       });
     } else {
       toast({
-        title: "Заявка отменена",
-        description: "Ваша заявка была успешно отменена",
+        title: t("ordersList.orderCancelled"),
+        description: t("ordersList.orderCancelledDesc"),
       });
       fetchOrders();
     }
@@ -151,7 +147,7 @@ export const OrdersList = ({ refreshTrigger }: OrdersListProps) => {
       <Card>
         <CardContent className="py-12 text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto text-muted-foreground" />
-          <p className="mt-2 text-muted-foreground">Загрузка заявок...</p>
+          <p className="mt-2 text-muted-foreground">{t("ordersList.loadingOrders")}</p>
         </CardContent>
       </Card>
     );
@@ -162,8 +158,8 @@ export const OrdersList = ({ refreshTrigger }: OrdersListProps) => {
       <Card>
         <CardContent className="py-12 text-center">
           <Package className="w-12 h-12 mx-auto text-muted-foreground/50 mb-4" />
-          <p className="text-muted-foreground">У вас пока нет заявок</p>
-          <p className="text-sm text-muted-foreground">Создайте первую заявку выше</p>
+          <p className="text-muted-foreground">{t("ordersList.noOrdersYet")}</p>
+          <p className="text-sm text-muted-foreground">{t("ordersList.createFirstOrder")}</p>
         </CardContent>
       </Card>
     );
@@ -173,9 +169,9 @@ export const OrdersList = ({ refreshTrigger }: OrdersListProps) => {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Мои заявки</CardTitle>
+          <CardTitle>{t("ordersList.myOrders")}</CardTitle>
           <CardDescription>
-            Всего заявок: {orders.length}
+            {t("ordersList.totalOrders")}: {orders.length}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -200,18 +196,18 @@ export const OrdersList = ({ refreshTrigger }: OrdersListProps) => {
                       {order.responses_count && order.responses_count > 0 && (
                         <Badge variant="outline" className="gap-1">
                           <MessageSquare className="w-3 h-3" />
-                          {order.responses_count} откликов
+                          {order.responses_count} {t("ordersList.responses")}
                         </Badge>
                       )}
                       {order.photo_urls && order.photo_urls.length > 0 && (
                         <Badge variant="outline" className="gap-1">
                           <ImageIcon className="w-3 h-3" />
-                          {order.photo_urls.length} фото
+                          {order.photo_urls.length} {t("ordersList.photos")}
                         </Badge>
                       )}
                       {editable && (
                         <Badge variant="outline" className="text-xs bg-yellow-50 text-yellow-700 border-yellow-200">
-                          Можно изменить
+                          {t("ordersList.canEdit")}
                         </Badge>
                       )}
                     </div>
@@ -233,12 +229,12 @@ export const OrdersList = ({ refreshTrigger }: OrdersListProps) => {
                     <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Calendar className="w-4 h-4" />
-                        {format(new Date(order.pickup_date), "d MMMM yyyy", { locale: ru })}
+                        {format(new Date(order.pickup_date), "d MMMM yyyy", { locale: dateLocale })}
                       </div>
                       {order.weight && (
                         <div className="flex items-center gap-1">
                           <Weight className="w-4 h-4" />
-                          {order.weight} кг
+                          {order.weight} {t("common.kg")}
                         </div>
                       )}
                       {(order.length || order.width || order.height) && (
@@ -265,7 +261,7 @@ export const OrdersList = ({ refreshTrigger }: OrdersListProps) => {
                       onClick={() => navigate(`/orders/${order.id}/responses`)}
                     >
                       <Eye className="w-4 h-4 mr-1" />
-                      Подробнее
+                      {t("ordersList.details")}
                     </Button>
                     {order.status === "open" && order.responses_count && order.responses_count > 0 && (
                       <Button 
@@ -274,7 +270,7 @@ export const OrdersList = ({ refreshTrigger }: OrdersListProps) => {
                         onClick={() => navigate(`/orders/${order.id}/responses`)}
                       >
                         <MessageSquare className="w-4 h-4 mr-1" />
-                        Отклики ({order.responses_count})
+                        {t("ordersList.responses")} ({order.responses_count})
                       </Button>
                     )}
                     {editable && (
@@ -284,7 +280,7 @@ export const OrdersList = ({ refreshTrigger }: OrdersListProps) => {
                         onClick={() => openCancelDialog(order)}
                       >
                         <X className="w-4 h-4 mr-1" />
-                        Отменить
+                        {t("ordersList.cancelOrder")}
                       </Button>
                     )}
                   </div>
@@ -299,14 +295,13 @@ export const OrdersList = ({ refreshTrigger }: OrdersListProps) => {
       <AlertDialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Отменить заявку?</AlertDialogTitle>
+            <AlertDialogTitle>{t("ordersList.cancelOrderTitle")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Вы уверены, что хотите отменить эту заявку? Это действие нельзя отменить.
-              Все отклики перевозчиков будут отклонены.
+              {t("ordersList.cancelOrderDesc")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Не отменять</AlertDialogCancel>
+            <AlertDialogCancel>{t("ordersList.dontCancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleCancelOrder}
               disabled={cancelling}
@@ -315,7 +310,7 @@ export const OrdersList = ({ refreshTrigger }: OrdersListProps) => {
               {cancelling ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
               ) : null}
-              Да, отменить
+              {t("ordersList.yesCancel")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

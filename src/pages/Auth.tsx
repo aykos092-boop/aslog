@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,10 +12,7 @@ import { User, Truck, ArrowLeft, Loader2, Gift } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
-
-const emailSchema = z.string().email("Неверный формат email");
-const passwordSchema = z.string().min(6, "Минимум 6 символов");
-const nameSchema = z.string().min(2, "Минимум 2 символа");
+import { BRAND } from "@/config/brand";
 
 type Role = "client" | "carrier";
 
@@ -23,6 +21,12 @@ const Auth = () => {
   const [searchParams] = useSearchParams();
   const { user, signIn, signUp, loading: authLoading } = useAuth();
   const { toast } = useToast();
+  const { t } = useLanguage();
+
+  // Dynamic validation schemas with translations
+  const emailSchema = z.string().email(t("auth.invalidEmail"));
+  const passwordSchema = z.string().min(6, `${t("auth.minChars")} 6 ${t("auth.chars")}`);
+  const nameSchema = z.string().min(2, `${t("auth.minChars")} 2 ${t("auth.chars")}`);
 
   // Login state
   const [loginEmail, setLoginEmail] = useState("");
@@ -78,7 +82,7 @@ const Auth = () => {
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast({
-          title: "Ошибка валидации",
+          title: t("auth.validationError"),
           description: error.errors[0].message,
           variant: "destructive",
         });
@@ -91,21 +95,21 @@ const Auth = () => {
     const { error } = await signIn(loginEmail, loginPassword);
 
     if (error) {
-      let message = "Произошла ошибка при входе";
+      let message = t("auth.loginFailed");
       if (error.message.includes("Invalid login credentials")) {
-        message = "Неверный email или пароль";
+        message = t("auth.invalidCredentials");
       } else if (error.message.includes("Email not confirmed")) {
-        message = "Email не подтверждён";
+        message = t("auth.emailNotConfirmed");
       }
       toast({
-        title: "Ошибка входа",
+        title: t("auth.loginError"),
         description: message,
         variant: "destructive",
       });
     } else {
       toast({
-        title: "Добро пожаловать!",
-        description: "Вы успешно вошли в систему",
+        title: t("auth.welcome"),
+        description: t("auth.loginSuccess"),
       });
       navigate("/dashboard");
     }
@@ -123,7 +127,7 @@ const Auth = () => {
     } catch (error) {
       if (error instanceof z.ZodError) {
         toast({
-          title: "Ошибка валидации",
+          title: t("auth.validationError"),
           description: error.errors[0].message,
           variant: "destructive",
         });
@@ -136,12 +140,12 @@ const Auth = () => {
     const { error, data } = await signUp(signupEmail, signupPassword, signupRole, signupName);
 
     if (error) {
-      let message = "Произошла ошибка при регистрации";
+      let message = t("auth.registrationFailed");
       if (error.message.includes("already registered")) {
-        message = "Этот email уже зарегистрирован";
+        message = t("auth.emailAlreadyRegistered");
       }
       toast({
-        title: "Ошибка регистрации",
+        title: t("auth.registrationError"),
         description: message,
         variant: "destructive",
       });
@@ -167,8 +171,8 @@ const Auth = () => {
     }
 
     toast({
-      title: "Регистрация успешна!",
-      description: "Добро пожаловать в LogiFlow",
+      title: t("auth.registrationSuccess"),
+      description: t("auth.welcomeToPlatform"),
     });
     navigate("/dashboard");
 
@@ -199,28 +203,28 @@ const Auth = () => {
           onClick={() => navigate("/")}
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
-          На главную
+          {t("auth.backToHome")}
         </Button>
 
         <Card className="border-2">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">LogiFlow</CardTitle>
+            <CardTitle className="text-2xl font-bold">{BRAND.name}</CardTitle>
             <CardDescription>
-              Платформа для грузоперевозок
+              {t("auth.platformDesc")}
             </CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="login" className="w-full">
               <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="login">Вход</TabsTrigger>
-                <TabsTrigger value="signup">Регистрация</TabsTrigger>
+                <TabsTrigger value="login">{t("auth.loginTab")}</TabsTrigger>
+                <TabsTrigger value="signup">{t("auth.registerTab")}</TabsTrigger>
               </TabsList>
 
               {/* Login Form */}
               <TabsContent value="login">
                 <form onSubmit={handleLogin} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="login-email">Email</Label>
+                    <Label htmlFor="login-email">{t("auth.email")}</Label>
                     <Input
                       id="login-email"
                       type="email"
@@ -231,7 +235,7 @@ const Auth = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="login-password">Пароль</Label>
+                    <Label htmlFor="login-password">{t("auth.password")}</Label>
                     <Input
                       id="login-password"
                       type="password"
@@ -251,10 +255,10 @@ const Auth = () => {
                     {loginLoading ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Вход...
+                        {t("auth.loggingIn")}
                       </>
                     ) : (
-                      "Войти"
+                      t("auth.login")
                     )}
                   </Button>
                 </form>
@@ -264,18 +268,18 @@ const Auth = () => {
               <TabsContent value="signup">
                 <form onSubmit={handleSignup} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signup-name">Имя</Label>
+                    <Label htmlFor="signup-name">{t("profile.name")}</Label>
                     <Input
                       id="signup-name"
                       type="text"
-                      placeholder="Иван Иванов"
+                      placeholder={t("auth.namePlaceholder")}
                       value={signupName}
                       onChange={(e) => setSignupName(e.target.value)}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
+                    <Label htmlFor="signup-email">{t("auth.email")}</Label>
                     <Input
                       id="signup-email"
                       type="email"
@@ -286,11 +290,11 @@ const Auth = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="signup-password">Пароль</Label>
+                    <Label htmlFor="signup-password">{t("auth.password")}</Label>
                     <Input
                       id="signup-password"
                       type="password"
-                      placeholder="Минимум 6 символов"
+                      placeholder={t("auth.passwordPlaceholder")}
                       value={signupPassword}
                       onChange={(e) => setSignupPassword(e.target.value)}
                       required
@@ -299,7 +303,7 @@ const Auth = () => {
 
                   {/* Role Selection */}
                   <div className="space-y-3">
-                    <Label>Выберите роль</Label>
+                    <Label>{t("auth.selectRole")}</Label>
                     <RadioGroup
                       value={signupRole}
                       onValueChange={(value) => setSignupRole(value as Role)}
@@ -321,9 +325,9 @@ const Auth = () => {
                         <div className="w-12 h-12 rounded-full gradient-customer flex items-center justify-center">
                           <User className="w-6 h-6 text-white" />
                         </div>
-                        <span className="font-medium">Клиент</span>
+                        <span className="font-medium">{t("role.client")}</span>
                         <span className="text-xs text-muted-foreground text-center">
-                          Заказываю перевозки
+                          {t("auth.iOrderDelivery")}
                         </span>
                       </Label>
 
@@ -343,9 +347,9 @@ const Auth = () => {
                         <div className="w-12 h-12 rounded-full gradient-driver flex items-center justify-center">
                           <Truck className="w-6 h-6 text-white" />
                         </div>
-                        <span className="font-medium">Перевозчик</span>
+                        <span className="font-medium">{t("role.carrier")}</span>
                         <span className="text-xs text-muted-foreground text-center">
-                          Выполняю заказы
+                          {t("auth.iExecuteOrders")}
                         </span>
                       </Label>
                     </RadioGroup>
@@ -355,12 +359,12 @@ const Auth = () => {
                   <div className="space-y-2">
                     <Label htmlFor="referral-code" className="flex items-center gap-2">
                       <Gift className="w-4 h-4" />
-                      Реферальный код (необязательно)
+                      {t("auth.referralCode")}
                     </Label>
                     <Input
                       id="referral-code"
                       type="text"
-                      placeholder="Введите код друга"
+                      placeholder={t("auth.enterFriendCode")}
                       value={referralCode}
                       onChange={(e) => {
                         const code = e.target.value.toUpperCase();
@@ -370,10 +374,10 @@ const Auth = () => {
                       className={referralValid === true ? "border-green-500" : referralValid === false ? "border-red-500" : ""}
                     />
                     {referralValid === true && (
-                      <p className="text-xs text-green-600">✓ Код действителен</p>
+                      <p className="text-xs text-green-600">✓ {t("auth.codeValid")}</p>
                     )}
                     {referralValid === false && referralCode && (
-                      <p className="text-xs text-red-600">✗ Код не найден</p>
+                      <p className="text-xs text-red-600">✗ {t("auth.codeNotFound")}</p>
                     )}
                   </div>
 
@@ -387,17 +391,17 @@ const Auth = () => {
                     {signupLoading ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Регистрация...
+                        {t("auth.registering")}
                       </>
                     ) : (
-                      `Зарегистрироваться как ${signupRole === "client" ? "Клиент" : "Перевозчик"}`
+                      `${t("auth.registerAs")} ${signupRole === "client" ? t("role.client") : t("role.carrier")}`
                     )}
                   </Button>
 
                   <div className="text-center">
-                    <span className="text-sm text-muted-foreground">или </span>
+                    <span className="text-sm text-muted-foreground">{t("auth.orFullRegistration")} </span>
                     <a href="/register" className="text-sm text-primary hover:underline">
-                      пройти полную регистрацию →
+                      {t("auth.fullRegistration")}
                     </a>
                   </div>
                 </form>

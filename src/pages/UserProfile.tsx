@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import { ru } from "date-fns/locale";
+import { ru, enUS } from "date-fns/locale";
 import {
-  ArrowLeft, User, Truck, Star, Package, Shield,
+  ArrowLeft, User, Truck, Star, Shield,
   CheckCircle, Clock, TrendingUp, Award, Loader2, Quote, Pencil
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -55,18 +56,21 @@ interface Stats {
 
 type UserRole = "client" | "carrier" | "admin";
 
-const getTrustLevel = (avgRating: number, completedDeals: number) => {
-  if (completedDeals === 0) return { level: "new", label: "Новый", color: "bg-muted text-muted-foreground" };
-  if (avgRating >= 4.5 && completedDeals >= 10) return { level: "gold", label: "Gold", color: "bg-gold text-white" };
-  if (avgRating >= 4.0 && completedDeals >= 5) return { level: "silver", label: "Silver", color: "bg-gray-400 text-white" };
-  if (avgRating >= 3.0 && completedDeals >= 1) return { level: "bronze", label: "Bronze", color: "bg-amber-600 text-white" };
-  return { level: "new", label: "Новый", color: "bg-muted text-muted-foreground" };
-};
-
 const UserProfile = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { t, language } = useLanguage();
+  
+  const dateLocale = language === "ru" ? ru : language === "uz" ? ru : enUS;
+  
+  const getTrustLevel = (avgRating: number, completedDeals: number) => {
+    if (completedDeals === 0) return { level: "new", label: t("level.beginner"), color: "bg-muted text-muted-foreground" };
+    if (avgRating >= 4.5 && completedDeals >= 10) return { level: "gold", label: "Gold", color: "bg-gold text-white" };
+    if (avgRating >= 4.0 && completedDeals >= 5) return { level: "silver", label: "Silver", color: "bg-gray-400 text-white" };
+    if (avgRating >= 3.0 && completedDeals >= 1) return { level: "bronze", label: "Bronze", color: "bg-amber-600 text-white" };
+    return { level: "new", label: t("level.beginner"), color: "bg-muted text-muted-foreground" };
+  };
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
@@ -186,8 +190,8 @@ const UserProfile = () => {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <User className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-          <h2 className="text-xl font-semibold mb-2">Профиль не найден</h2>
-          <Button onClick={() => navigate(-1)}>Назад</Button>
+          <h2 className="text-xl font-semibold mb-2">{t("profile.notFound")}</h2>
+          <Button onClick={() => navigate(-1)}>{t("common.back")}</Button>
         </div>
       </div>
     );
@@ -201,9 +205,9 @@ const UserProfile = () => {
   const isOwnProfile = user?.id === targetUserId;
 
   const roleConfig = {
-    client: { label: "Клиент", icon: User, color: "bg-customer text-white" },
-    carrier: { label: "Перевозчик", icon: Truck, color: "bg-driver text-white" },
-    admin: { label: "Админ", icon: Shield, color: "bg-primary text-primary-foreground" },
+    client: { label: t("role.client"), icon: User, color: "bg-customer text-white" },
+    carrier: { label: t("role.carrier"), icon: Truck, color: "bg-driver text-white" },
+    admin: { label: t("role.admin"), icon: Shield, color: "bg-primary text-primary-foreground" },
   };
 
   const currentRole = role ? roleConfig[role] : null;
@@ -220,13 +224,13 @@ const UserProfile = () => {
                 <ArrowLeft className="w-5 h-5" />
               </Button>
               <h1 className="text-xl font-bold">
-                {isOwnProfile ? "Мой профиль" : "Профиль пользователя"}
+                {isOwnProfile ? t("profile.myProfile") : t("profile.userProfile")}
               </h1>
             </div>
             {isOwnProfile && !isEditing && (
               <Button variant="outline" onClick={() => setIsEditing(true)}>
                 <Pencil className="w-4 h-4 mr-2" />
-                Редактировать
+                {t("common.edit")}
               </Button>
             )}
           </div>
@@ -258,11 +262,11 @@ const UserProfile = () => {
               {/* Info */}
               <div className="flex-1 text-center sm:text-left">
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-2">
-                  <h2 className="text-2xl font-bold">{profile.full_name || "Без имени"}</h2>
+                  <h2 className="text-2xl font-bold">{profile.full_name || t("profile.noName")}</h2>
                   {profile.is_verified && (
                     <Badge variant="outline" className="text-green-500 border-green-500">
                       <CheckCircle className="w-3 h-3 mr-1" />
-                      Верифицирован
+                      {t("profile.verified")}
                     </Badge>
                   )}
                 </div>
@@ -296,20 +300,20 @@ const UserProfile = () => {
                     <span className="font-bold text-lg">{avgRating.toFixed(1)}</span>
                   </div>
                   <span className="text-sm text-muted-foreground">
-                    {ratings.length} {ratings.length === 1 ? "отзыв" : "отзывов"}
+                    {ratings.length} {ratings.length === 1 ? t("profile.review") : t("profile.reviewsCount")}
                   </span>
                 </div>
 
                 {/* Additional Info */}
                 {(profile.company_name || profile.vehicle_type) && (
                   <div className="mt-4 text-sm text-muted-foreground">
-                    {profile.company_name && <p>Компания: {profile.company_name}</p>}
-                    {profile.vehicle_type && <p>Транспорт: {profile.vehicle_type}</p>}
+                    {profile.company_name && <p>{t("profile.company")}: {profile.company_name}</p>}
+                    {profile.vehicle_type && <p>{t("profile.vehicle")}: {profile.vehicle_type}</p>}
                   </div>
                 )}
 
                 <p className="text-xs text-muted-foreground mt-2">
-                  На платформе с {format(new Date(profile.created_at), "MMMM yyyy", { locale: ru })}
+                  {t("profile.onPlatformSince")} {format(new Date(profile.created_at), "MMMM yyyy", { locale: dateLocale })}
                 </p>
               </div>
             </div>
@@ -323,28 +327,28 @@ const UserProfile = () => {
             <CardContent className="pt-6 text-center">
               <TrendingUp className="w-8 h-8 mx-auto mb-2 text-primary" />
               <div className="text-2xl font-bold">{stats.totalDeals}</div>
-              <p className="text-sm text-muted-foreground">Всего сделок</p>
+              <p className="text-sm text-muted-foreground">{t("profile.totalDeals")}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6 text-center">
               <CheckCircle className="w-8 h-8 mx-auto mb-2 text-green-500" />
               <div className="text-2xl font-bold">{stats.completedDeals}</div>
-              <p className="text-sm text-muted-foreground">Завершено</p>
+              <p className="text-sm text-muted-foreground">{t("profile.completed")}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6 text-center">
               <Clock className="w-8 h-8 mx-auto mb-2 text-driver" />
               <div className="text-2xl font-bold">{stats.activeDeals}</div>
-              <p className="text-sm text-muted-foreground">Активных</p>
+              <p className="text-sm text-muted-foreground">{t("profile.active")}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6 text-center">
               <Star className="w-8 h-8 mx-auto mb-2 text-gold" />
               <div className="text-2xl font-bold">{avgRating.toFixed(1)}</div>
-              <p className="text-sm text-muted-foreground">Рейтинг</p>
+              <p className="text-sm text-muted-foreground">{t("profile.rating")}</p>
             </CardContent>
           </Card>
         </div>
@@ -355,7 +359,7 @@ const UserProfile = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Star className="w-5 h-5 text-gold" />
-                Распределение оценок
+                {t("profile.ratingDistribution")}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -385,8 +389,8 @@ const UserProfile = () => {
         {isOwnProfile && (
           <Tabs defaultValue="reviews" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-4">
-              <TabsTrigger value="reviews">Отзывы</TabsTrigger>
-              <TabsTrigger value="kyc">Верификация</TabsTrigger>
+              <TabsTrigger value="reviews">{t("profile.reviews")}</TabsTrigger>
+              <TabsTrigger value="kyc">{t("profile.verification")}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="reviews">
@@ -395,17 +399,17 @@ const UserProfile = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Quote className="w-5 h-5" />
-                    Отзывы
+                    {t("profile.reviews")}
                   </CardTitle>
                   <CardDescription>
-                    {ratings.length > 0 ? `${ratings.length} отзывов` : "Пока нет отзывов"}
+                    {ratings.length > 0 ? `${ratings.length} ${t("profile.reviewsCount")}` : t("profile.noReviewsYet")}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   {ratings.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <Star className="w-12 h-12 mx-auto mb-4 opacity-30" />
-                      <p>У пользователя пока нет отзывов</p>
+                      <p>{t("profile.noReviewsYet")}</p>
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -420,10 +424,10 @@ const UserProfile = () => {
                             <div className="flex-1">
                               <div className="flex items-center justify-between mb-1">
                                 <span className="font-medium">
-                                  {rating.rater_profile?.full_name || "Пользователь"}
+                                  {rating.rater_profile?.full_name || t("profile.user")}
                                 </span>
                                 <span className="text-xs text-muted-foreground">
-                                  {format(new Date(rating.created_at), "d MMMM yyyy", { locale: ru })}
+                                  {format(new Date(rating.created_at), "d MMMM yyyy", { locale: dateLocale })}
                                 </span>
                               </div>
                               <div className="flex gap-0.5 mb-2">
