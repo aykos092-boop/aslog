@@ -6,7 +6,7 @@ import {
   Navigation, MapPin, Clock, Route as RouteIcon, Car, 
   Footprints, Bus, Bike, ArrowLeft, Loader2,
   ChevronRight, DollarSign, AlertTriangle, RotateCcw,
-  X, ChevronDown, ChevronUp
+  X, ChevronDown, ChevronUp, Compass, Locate
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -194,6 +194,9 @@ const Navigator = () => {
   const [isNavigating, setIsNavigating] = useState(false);
   const [orderFromCoords, setOrderFromCoords] = useState<Coords | null>(null);
   const [orderToCoords, setOrderToCoords] = useState<Coords | null>(null);
+  const [followMeMode, setFollowMeMode] = useState(false);
+  const [currentHeading, setCurrentHeading] = useState<number>(0);
+  const [lastPosition, setLastPosition] = useState<Coords | null>(null);
   
   // Voice settings state
   const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>({
@@ -238,6 +241,21 @@ const Navigator = () => {
   const locationMarkerRef = useRef<L.Marker | null>(null);
   const lastAnnouncedStepRef = useRef<number>(-1);
   const watchIdRef = useRef<number | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const mapContainerWrapperRef = useRef<HTMLDivElement>(null);
+  
+  // Calculate bearing between two points
+  const calculateBearing = useCallback((from: Coords, to: Coords): number => {
+    const dLon = (to.lng - from.lng) * Math.PI / 180;
+    const lat1 = from.lat * Math.PI / 180;
+    const lat2 = to.lat * Math.PI / 180;
+    
+    const y = Math.sin(dLon) * Math.cos(lat2);
+    const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
+    
+    let bearing = Math.atan2(y, x) * 180 / Math.PI;
+    return (bearing + 360) % 360;
+  }, []);
   // Initialize map
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -651,25 +669,69 @@ const Navigator = () => {
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
         const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        
+        // Calculate heading from last position
+        if (lastPosition) {
+          const distance = calculateDistance(lastPosition, coords);
+          if (distance > 3) { // Only update heading if moved more than 3 meters
+            const newHeading = calculateBearing(lastPosition, coords);
+            setCurrentHeading(newHeading);
+          }
+        }
+        setLastPosition(coords);
         setCurrentPosition(coords);
         
-        // Update location marker on map
+        // Update location marker on map with rotation
         if (mapRef.current) {
           if (locationMarkerRef.current) {
             locationMarkerRef.current.setLatLng([coords.lat, coords.lng]);
+            // Update marker rotation
+            const markerElement = locationMarkerRef.current.getElement();
+            if (markerElement) {
+              const arrowElement = markerElement.querySelector('.location-arrow') as HTMLElement;
+              if (arrowElement) {
+                arrowElement.style.transform = `rotate(${currentHeading}deg)`;
+              }
+            }
           } else {
             const locationIcon = L.divIcon({
               className: "nav-marker-custom",
-              html: `<div class="location-dot"><div class="location-pulse"></div></div>`,
-              iconSize: [24, 24],
-              iconAnchor: [12, 12],
+              html: `
+                <div class="location-container">
+                  <div class="location-arrow" style="transform: rotate(${currentHeading}deg)">
+                    <svg viewBox="0 0 24 24" fill="currentColor" class="arrow-svg">
+                      <path d="M12 2L4 20L12 16L20 20L12 2Z"/>
+                    </svg>
+                  </div>
+                  <div class="location-dot-inner"></div>
+                  <div class="location-pulse"></div>
+                </div>
+              `,
+              iconSize: [60, 60],
+              iconAnchor: [30, 30],
             });
             locationMarkerRef.current = L.marker([coords.lat, coords.lng], { icon: locationIcon })
               .addTo(mapRef.current);
           }
           
-          // Smooth pan to keep user centered
-          mapRef.current.panTo([coords.lat, coords.lng], { animate: true, duration: 0.5 });
+          // Follow me mode: rotate map and keep centered
+          if (followMeMode) {
+            // Rotate map container based on heading
+            if (mapContainerWrapperRef.current) {
+              mapContainerWrapperRef.current.style.transform = `rotate(${-currentHeading}deg)`;
+            }
+            // Zoom in more for follow mode
+            if (mapRef.current.getZoom() < 17) {
+              mapRef.current.setZoom(17);
+            }
+            mapRef.current.panTo([coords.lat, coords.lng], { animate: true, duration: 0.3 });
+          } else {
+            // Normal mode - no rotation
+            if (mapContainerWrapperRef.current) {
+              mapContainerWrapperRef.current.style.transform = 'rotate(0deg)';
+            }
+            mapRef.current.panTo([coords.lat, coords.lng], { animate: true, duration: 0.5 });
+          }
         }
         
         // Check for maneuver announcements
@@ -681,15 +743,16 @@ const Navigator = () => {
       },
       { 
         enableHighAccuracy: true, 
-        maximumAge: 3000, 
-        timeout: 15000 
+        maximumAge: 2000, 
+        timeout: 10000 
       }
     );
-  }, [selectedRoute, voiceSettings.enabled, speak, checkAndAnnounceManeuver, toast, t]);
+  }, [selectedRoute, voiceSettings.enabled, speak, checkAndAnnounceManeuver, toast, t, lastPosition, calculateDistance, calculateBearing, currentHeading, followMeMode]);
 
   // Stop navigation
   const stopNavigation = useCallback(() => {
     setIsNavigating(false);
+    setFollowMeMode(false);
     stopVoice();
     
     if (watchIdRef.current !== null) {
@@ -701,7 +764,23 @@ const Navigator = () => {
       mapRef.current.removeLayer(locationMarkerRef.current);
       locationMarkerRef.current = null;
     }
+    
+    // Reset map rotation
+    if (mapContainerWrapperRef.current) {
+      mapContainerWrapperRef.current.style.transform = 'rotate(0deg)';
+    }
   }, [stopVoice]);
+  
+  // Toggle follow me mode
+  const toggleFollowMe = useCallback(() => {
+    setFollowMeMode(prev => !prev);
+    if (!followMeMode && mapRef.current && currentPosition) {
+      mapRef.current.setZoom(17);
+      mapRef.current.panTo([currentPosition.lat, currentPosition.lng]);
+    } else if (mapContainerWrapperRef.current) {
+      mapContainerWrapperRef.current.style.transform = 'rotate(0deg)';
+    }
+  }, [followMeMode, currentPosition]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -1119,17 +1198,56 @@ const Navigator = () => {
       </button>
 
       {/* Map */}
-      <div className="flex-1 relative min-h-[320px] sm:min-h-0">
-        <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" />
+      <div className="flex-1 relative min-h-[320px] sm:min-h-0 overflow-hidden">
+        <div 
+          ref={mapContainerWrapperRef}
+          className="absolute inset-0 w-full h-full transition-transform duration-300 ease-out"
+          style={{ transformOrigin: 'center center' }}
+        >
+          <div ref={mapContainerRef} className="absolute inset-0 w-full h-full" />
+        </div>
+
+        {/* Compass indicator when in follow mode */}
+        {followMeMode && isNavigating && (
+          <div className="absolute top-20 left-1/2 -translate-x-1/2 z-20 bg-background/90 backdrop-blur-sm rounded-full p-2 shadow-lg border">
+            <Compass className="h-6 w-6 text-primary" />
+          </div>
+        )}
 
         {/* Map Controls */}
-        <div className="absolute top-4 right-4 flex flex-col gap-2">
+        <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
           <MapStyleSelector value={mapStyle} onChange={setMapStyle} />
+          
+          {/* Follow Me Toggle */}
+          {isNavigating && (
+            <Button
+              variant={followMeMode ? "default" : "outline"}
+              size="icon"
+              onClick={toggleFollowMe}
+              className={cn(
+                "shadow-lg",
+                followMeMode && "bg-primary text-primary-foreground"
+              )}
+              title={followMeMode ? "Отключить следование" : "Следовать за мной"}
+            >
+              <Locate className="h-5 w-5" />
+            </Button>
+          )}
         </div>
+        
+        {/* Current heading indicator */}
+        {isNavigating && currentPosition && (
+          <div className="absolute bottom-4 left-4 z-10 bg-background/90 backdrop-blur-sm rounded-lg p-3 shadow-lg border">
+            <div className="flex items-center gap-2 text-sm">
+              <Compass className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">{Math.round(currentHeading)}°</span>
+            </div>
+          </div>
+        )}
 
         {/* Loading Overlay */}
         {loading && (
-          <div className="absolute inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center">
+          <div className="absolute inset-0 bg-background/50 backdrop-blur-sm flex items-center justify-center z-20">
             <div className="text-center">
               <Loader2 className="h-10 w-10 animate-spin mx-auto text-primary" />
               <p className="mt-2 font-medium">{t.loading}</p>
@@ -1163,24 +1281,50 @@ const Navigator = () => {
         .nav-point.end {
           background: linear-gradient(135deg, #ef4444, #dc2626);
         }
-        .location-dot {
-          width: 20px;
-          height: 20px;
+        
+        /* Enhanced location marker with direction arrow */
+        .location-container {
+          width: 60px;
+          height: 60px;
+          position: relative;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .location-arrow {
+          position: absolute;
+          width: 50px;
+          height: 50px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: transform 0.3s ease-out;
+          z-index: 2;
+        }
+        .arrow-svg {
+          width: 36px;
+          height: 36px;
+          color: #4285F4;
+          filter: drop-shadow(0 2px 4px rgba(66, 133, 244, 0.4));
+        }
+        .location-dot-inner {
+          width: 16px;
+          height: 16px;
           border-radius: 50%;
           background: #4285F4;
           border: 3px solid white;
           box-shadow: 0 2px 8px rgba(66, 133, 244, 0.5);
-          position: relative;
+          position: absolute;
+          z-index: 3;
         }
         .location-pulse {
           position: absolute;
-          top: -8px;
-          left: -8px;
-          width: 32px;
-          height: 32px;
+          width: 60px;
+          height: 60px;
           border-radius: 50%;
-          background: rgba(66, 133, 244, 0.3);
+          background: rgba(66, 133, 244, 0.2);
           animation: pulse 2s ease-out infinite;
+          z-index: 1;
         }
         @keyframes pulse {
           0% {
@@ -1191,6 +1335,11 @@ const Navigator = () => {
             transform: scale(1.5);
             opacity: 0;
           }
+        }
+        
+        /* Map rotation transition */
+        .leaflet-container {
+          transition: none !important;
         }
       `}</style>
     </div>
