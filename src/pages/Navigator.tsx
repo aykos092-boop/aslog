@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { 
@@ -168,6 +168,8 @@ const translations = {
 
 const Navigator = () => {
   const navigate = useNavigate();
+  const { orderId } = useParams<{ orderId?: string }>();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { language } = useLanguage();
   const t = translations[language as keyof typeof translations] || translations.ru;
@@ -179,11 +181,13 @@ const Navigator = () => {
   const [routes, setRoutes] = useState<RouteData[]>([]);
   const [selectedRouteIndex, setSelectedRouteIndex] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [orderLoading, setOrderLoading] = useState(!!orderId);
   const [error, setError] = useState<string | null>(null);
   const [mapStyle, setMapStyle] = useState<MapStyle>("light");
   const [stepsExpanded, setStepsExpanded] = useState(false);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [currentPosition, setCurrentPosition] = useState<Coords | null>(null);
+  const [autoRouteBuilt, setAutoRouteBuilt] = useState(false);
   
   // Refs
   const mapRef = useRef<L.Map | null>(null);
@@ -227,6 +231,80 @@ const Navigator = () => {
       }
     };
   }, []);
+
+  // Load order data if orderId is provided
+  useEffect(() => {
+    const loadOrderData = async () => {
+      if (!orderId) {
+        // Check for URL params (from/to)
+        const fromParam = searchParams.get("from");
+        const toParam = searchParams.get("to");
+        if (fromParam) setFromAddress(fromParam);
+        if (toParam) setToAddress(toParam);
+        return;
+      }
+
+      setOrderLoading(true);
+      
+      try {
+        // First try to get order directly
+        let orderData = null;
+        
+        const { data: directOrder } = await supabase
+          .from("orders")
+          .select("pickup_address, delivery_address, pickup_lat, pickup_lng, delivery_lat, delivery_lng")
+          .eq("id", orderId)
+          .single();
+        
+        if (directOrder) {
+          orderData = directOrder;
+        } else {
+          // Try to get order through deal (for carriers)
+          const { data: dealData } = await supabase
+            .from("deals")
+            .select(`
+              order:orders(pickup_address, delivery_address, pickup_lat, pickup_lng, delivery_lat, delivery_lng)
+            `)
+            .eq("order_id", orderId)
+            .single();
+          
+          if (dealData?.order) {
+            orderData = dealData.order;
+          }
+        }
+
+        if (orderData) {
+          setFromAddress(orderData.pickup_address || "");
+          setToAddress(orderData.delivery_address || "");
+          
+          console.log("Order data loaded:", orderData);
+        } else {
+          toast({
+            title: t.error,
+            description: "Заказ не найден",
+            variant: "destructive",
+          });
+        }
+      } catch (err) {
+        console.error("Error loading order:", err);
+      } finally {
+        setOrderLoading(false);
+      }
+    };
+
+    loadOrderData();
+  }, [orderId, searchParams, toast, t]);
+
+  // Auto-build route when addresses are loaded from order
+  useEffect(() => {
+    if (!autoRouteBuilt && fromAddress && toAddress && !orderLoading && orderId) {
+      setAutoRouteBuilt(true);
+      // Small delay to ensure map is ready
+      setTimeout(() => {
+        buildRoute();
+      }, 500);
+    }
+  }, [fromAddress, toAddress, orderLoading, autoRouteBuilt, orderId]);
 
   // Update map style
   useEffect(() => {
@@ -451,6 +529,18 @@ const Navigator = () => {
   };
 
   const selectedRoute = routes[selectedRouteIndex];
+
+  // Show loading while fetching order data
+  if (orderLoading) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="h-10 w-10 animate-spin mx-auto text-primary" />
+          <p className="mt-4 text-muted-foreground">Загрузка данных заказа...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex bg-background">

@@ -379,7 +379,7 @@ const DealChat = () => {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => navigate(`/navigate/${dealId}`)}
+                      onClick={() => navigate(`/navigator/${deal.order_id}`)}
                     >
                       <Maximize2 className="w-4 h-4 mr-1" />
                       Полная навигация
