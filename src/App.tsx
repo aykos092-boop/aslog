@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { AuthProvider } from "@/hooks/useAuth";
+import { FirebaseAuthProvider } from "@/hooks/useFirebaseAuth";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Register from "./pages/Register";
@@ -31,29 +32,29 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <AuthProvider>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/admin-login" element={<AdminLogin />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/orders/:orderId/responses" element={<OrderResponses />} />
-                <Route path="/orders/:orderId/chat/:carrierId" element={<OrderChat />} />
-                <Route path="/deals/:dealId/chat" element={<DealChat />} />
-                {/* Unified Navigator - single navigation component */}
-                <Route path="/navigate/:dealId" element={<UnifiedNavigator />} />
-                <Route path="/navigator" element={<UnifiedNavigator />} />
-                <Route path="/navigator/:orderId" element={<UnifiedNavigator />} />
-                <Route path="/admin" element={<AdminDashboard />} />
-                <Route path="/subscription" element={<Subscription />} />
-                <Route path="/profile" element={<UserProfile />} />
-                <Route path="/profile/:userId" element={<UserProfile />} />
-                <Route path="/api-docs" element={<ApiDocs />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </AuthProvider>
+            <FirebaseAuthProvider>
+              <AuthProvider>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/admin-login" element={<AdminLogin />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/orders/:orderId/responses" element={<OrderResponses />} />
+                  <Route path="/orders/:orderId/chat/:carrierId" element={<OrderChat />} />
+                  <Route path="/deals/:dealId/chat" element={<DealChat />} />
+                  <Route path="/navigate/:dealId" element={<UnifiedNavigator />} />
+                  <Route path="/navigator" element={<UnifiedNavigator />} />
+                  <Route path="/navigator/:orderId" element={<UnifiedNavigator />} />
+                  <Route path="/admin" element={<AdminDashboard />} />
+                  <Route path="/subscription" element={<Subscription />} />
+                  <Route path="/profile" element={<UserProfile />} />
+                  <Route path="/profile/:userId" element={<UserProfile />} />
+                  <Route path="/api-docs" element={<ApiDocs />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </AuthProvider>
+            </FirebaseAuthProvider>
           </BrowserRouter>
         </TooltipProvider>
       </LanguageProvider>
