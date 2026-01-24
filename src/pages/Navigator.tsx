@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { MapStyleSelector, MapStyle, mapTileUrls } from "@/components/map/MapStyleSelector";
 import { cn } from "@/lib/utils";
+import { useVoiceNavigation } from "@/hooks/useVoiceNavigation";
 
 // Types
 type TravelMode = "driving" | "walking" | "transit" | "bicycling";
@@ -188,13 +189,23 @@ const Navigator = () => {
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [currentPosition, setCurrentPosition] = useState<Coords | null>(null);
   const [autoRouteBuilt, setAutoRouteBuilt] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [isNavigating, setIsNavigating] = useState(false);
+  
+  // Voice navigation hook
+  const { speak, speakInstruction, stop: stopVoice, isSpeaking } = useVoiceNavigation({ 
+    enabled: voiceEnabled, 
+    language 
+  });
   
   // Refs
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const routeLinesRef = useRef<L.Polyline[]>([]);
   const markersRef = useRef<L.Marker[]>([]);
-
+  const locationMarkerRef = useRef<L.Marker | null>(null);
+  const lastAnnouncedStepRef = useRef<number>(-1);
+  const watchIdRef = useRef<number | null>(null);
   // Initialize map
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
@@ -477,6 +488,152 @@ const Navigator = () => {
     }
   }, [fromAddress, toAddress, travelMode, language, toast, t, drawRoutes]);
 
+  // Define selectedRoute early so it can be used in callbacks
+  const selectedRoute = routes[selectedRouteIndex];
+
+  // Calculate distance between two coordinates (Haversine formula)
+  const calculateDistance = useCallback((pos1: Coords, pos2: Coords): number => {
+    const R = 6371000; // Earth's radius in meters
+    const dLat = (pos2.lat - pos1.lat) * Math.PI / 180;
+    const dLon = (pos2.lng - pos1.lng) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(pos1.lat * Math.PI / 180) * Math.cos(pos2.lat * Math.PI / 180) *
+      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }, []);
+
+  // Find the next maneuver and announce it
+  const checkAndAnnounceManeuver = useCallback((currentPos: Coords) => {
+    if (!selectedRoute || !voiceEnabled || !isNavigating) return;
+
+    const steps = selectedRoute.steps;
+    
+    for (let i = 0; i < steps.length; i++) {
+      const step = steps[i];
+      const stepStart = step.startLocation;
+      const distance = calculateDistance(currentPos, stepStart);
+      
+      // Announce at different distances based on speed/mode
+      const announceDistances = travelMode === "walking" ? [50, 20] : [500, 200, 100, 50];
+      
+      for (const announceDistance of announceDistances) {
+        // Check if we should announce this step at this distance
+        if (distance <= announceDistance && distance > (announceDistance - 30)) {
+          // Avoid repeating the same announcement
+          const announcementKey = i * 1000 + announceDistance;
+          if (lastAnnouncedStepRef.current !== announcementKey) {
+            lastAnnouncedStepRef.current = announcementKey;
+            
+            // Format distance for announcement
+            let distanceText: string;
+            if (announceDistance >= 1000) {
+              distanceText = `${(announceDistance / 1000).toFixed(1)} километра`;
+            } else {
+              distanceText = `${announceDistance} метров`;
+            }
+            
+            // Announce the maneuver
+            speakInstruction(step.instruction, distanceText);
+            return;
+          }
+        }
+      }
+    }
+    
+    // Check if arrived at destination
+    const destination = steps[steps.length - 1]?.endLocation;
+    if (destination) {
+      const distanceToEnd = calculateDistance(currentPos, destination);
+      if (distanceToEnd < 50 && lastAnnouncedStepRef.current !== -999) {
+        lastAnnouncedStepRef.current = -999;
+        speak("Вы прибыли к месту назначения");
+      }
+    }
+  }, [selectedRoute, voiceEnabled, isNavigating, travelMode, calculateDistance, speakInstruction, speak]);
+
+  // Start real-time navigation with GPS tracking
+  const startNavigation = useCallback(() => {
+    if (!navigator.geolocation) {
+      toast({ title: t.error, description: "Геолокация недоступна" });
+      return;
+    }
+
+    setIsNavigating(true);
+    lastAnnouncedStepRef.current = -1;
+    
+    // Announce route start
+    if (selectedRoute && voiceEnabled) {
+      speak(`Маршрут: ${selectedRoute.distance.text}, время в пути ${selectedRoute.duration.text}`);
+    }
+
+    // Watch position for real-time updates
+    watchIdRef.current = navigator.geolocation.watchPosition(
+      (pos) => {
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setCurrentPosition(coords);
+        
+        // Update location marker on map
+        if (mapRef.current) {
+          if (locationMarkerRef.current) {
+            locationMarkerRef.current.setLatLng([coords.lat, coords.lng]);
+          } else {
+            const locationIcon = L.divIcon({
+              className: "nav-marker-custom",
+              html: `<div class="location-dot"><div class="location-pulse"></div></div>`,
+              iconSize: [24, 24],
+              iconAnchor: [12, 12],
+            });
+            locationMarkerRef.current = L.marker([coords.lat, coords.lng], { icon: locationIcon })
+              .addTo(mapRef.current);
+          }
+          
+          // Keep map centered on user
+          mapRef.current.setView([coords.lat, coords.lng], 17, { animate: true });
+        }
+        
+        // Check for maneuver announcements
+        checkAndAnnounceManeuver(coords);
+      },
+      (err) => {
+        console.error("GPS error:", err);
+        toast({ title: t.error, description: "Ошибка GPS" });
+      },
+      { 
+        enableHighAccuracy: true, 
+        maximumAge: 5000, 
+        timeout: 10000 
+      }
+    );
+  }, [selectedRoute, voiceEnabled, speak, checkAndAnnounceManeuver, toast, t]);
+
+  // Stop navigation
+  const stopNavigation = useCallback(() => {
+    setIsNavigating(false);
+    stopVoice();
+    
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    
+    if (locationMarkerRef.current && mapRef.current) {
+      mapRef.current.removeLayer(locationMarkerRef.current);
+      locationMarkerRef.current = null;
+    }
+  }, [stopVoice]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (watchIdRef.current !== null) {
+        navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+      stopVoice();
+    };
+  }, [stopVoice]);
+
   // Update route when selected index changes
   useEffect(() => {
     if (routes.length > 0) {
@@ -528,7 +685,7 @@ const Navigator = () => {
     }
   };
 
-  const selectedRoute = routes[selectedRouteIndex];
+  // selectedRoute is already defined above
 
   // Show loading while fetching order data
   if (orderLoading) {
@@ -625,23 +782,60 @@ const Navigator = () => {
           </Tabs>
 
           {/* Build Route Button */}
-          <Button 
-            className="w-full mt-4" 
-            onClick={buildRoute}
-            disabled={loading || !fromAddress.trim() || !toAddress.trim()}
-          >
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                {t.loading}
-              </>
-            ) : (
-              <>
-                <RouteIcon className="h-4 w-4 mr-2" />
-                {t.buildRoute}
-              </>
-            )}
-          </Button>
+          <div className="flex gap-2 mt-4">
+            <Button 
+              className="flex-1" 
+              onClick={buildRoute}
+              disabled={loading || !fromAddress.trim() || !toAddress.trim()}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {t.loading}
+                </>
+              ) : (
+                <>
+                  <RouteIcon className="h-4 w-4 mr-2" />
+                  {t.buildRoute}
+                </>
+              )}
+            </Button>
+            
+            {/* Voice Toggle */}
+            <Button
+              variant={voiceEnabled ? "secondary" : "outline"}
+              size="icon"
+              onClick={() => setVoiceEnabled(!voiceEnabled)}
+              title={voiceEnabled ? "Отключить голос" : "Включить голос"}
+            >
+              {voiceEnabled ? (
+                <Volume2 className={cn("h-4 w-4", isSpeaking && "text-primary animate-pulse")} />
+              ) : (
+                <VolumeX className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
+          
+          {/* Start/Stop Navigation Button */}
+          {selectedRoute && (
+            <Button
+              className="w-full mt-2"
+              variant={isNavigating ? "destructive" : "default"}
+              onClick={isNavigating ? stopNavigation : startNavigation}
+            >
+              {isNavigating ? (
+                <>
+                  <X className="h-4 w-4 mr-2" />
+                  Остановить навигацию
+                </>
+              ) : (
+                <>
+                  <Navigation className="h-4 w-4 mr-2" />
+                  Начать навигацию
+                </>
+              )}
+            </Button>
+          )}
         </div>
 
         {/* Route Results */}
@@ -883,6 +1077,35 @@ const Navigator = () => {
         }
         .nav-point.end {
           background: linear-gradient(135deg, #ef4444, #dc2626);
+        }
+        .location-dot {
+          width: 20px;
+          height: 20px;
+          border-radius: 50%;
+          background: #4285F4;
+          border: 3px solid white;
+          box-shadow: 0 2px 8px rgba(66, 133, 244, 0.5);
+          position: relative;
+        }
+        .location-pulse {
+          position: absolute;
+          top: -8px;
+          left: -8px;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          background: rgba(66, 133, 244, 0.3);
+          animation: pulse 2s ease-out infinite;
+        }
+        @keyframes pulse {
+          0% {
+            transform: scale(0.5);
+            opacity: 1;
+          }
+          100% {
+            transform: scale(1.5);
+            opacity: 0;
+          }
         }
       `}</style>
     </div>

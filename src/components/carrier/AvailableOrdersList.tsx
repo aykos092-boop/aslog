@@ -1,7 +1,8 @@
 import { useEffect, useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { ru } from "date-fns/locale";
-import { Package, MapPin, Calendar, Weight, Ruler, Send, Loader2, Eye, Search, Filter, X, CalendarIcon, ArrowUpDown, Image as ImageIcon, Banknote } from "lucide-react";
+import { Package, MapPin, Calendar, Weight, Ruler, Send, Loader2, Eye, Search, Filter, X, CalendarIcon, ArrowUpDown, Image as ImageIcon, Banknote, Navigation } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -62,6 +63,7 @@ interface Order {
 }
 
 export const AvailableOrdersList = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -515,7 +517,16 @@ export const AvailableOrdersList = () => {
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => navigate(`/navigator/${order.id}`)}
+                    title="Посмотреть маршрут"
+                  >
+                    <Navigation className="w-4 h-4 mr-1" />
+                    Маршрут
+                  </Button>
                   <Button 
                     variant="outline" 
                     size="sm"
