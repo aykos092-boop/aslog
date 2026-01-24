@@ -112,9 +112,15 @@ const Dashboard = () => {
   }];
   return <DashboardLayout breadcrumbs={breadcrumbs}>
       {/* Welcome Section */}
-      <div className="mb-6 animate-fade-up mx-0 my-0 px-[199px]">
-        
-        
+      <div className="mb-6 animate-fade-up px-[107px]">
+        <h1 className="text-xl md:text-2xl font-bold tracking-tight mb-1">
+          {getGreeting()}, <span className="text-gradient">{userName}</span>
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          {isClient && t("dashboard.subtitle.client")}
+          {isCarrier && t("dashboard.subtitle.carrier")}
+          {isAdmin && t("dashboard.subtitle.admin")}
+        </p>
       </div>
 
       {/* KPI Cards */}
