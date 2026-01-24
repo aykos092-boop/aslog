@@ -10,19 +10,80 @@ const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-// Click API credentials (to be configured)
+// Click API credentials
 const CLICK_MERCHANT_ID = Deno.env.get('CLICK_MERCHANT_ID') || 'demo_merchant';
 const CLICK_SERVICE_ID = Deno.env.get('CLICK_SERVICE_ID') || 'demo_service';
-const CLICK_SECRET_KEY = Deno.env.get('CLICK_SECRET_KEY') || '';
 
 // Payme credentials
 const PAYME_MERCHANT_ID = Deno.env.get('PAYME_MERCHANT_ID') || 'demo_merchant';
+
+// Input validation helpers
+function isValidUUID(str: string): boolean {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(str);
+}
+
+function sanitizeString(str: unknown, maxLength: number = 500): string | null {
+  if (typeof str !== 'string') return null;
+  return str.replace(/[\x00-\x1F\x7F]/g, '').trim().slice(0, maxLength);
+}
 
 interface PaymentRequest {
   planId: string;
   billingPeriod: 'monthly' | 'yearly';
   provider: 'click' | 'payme';
   returnUrl?: string;
+}
+
+function validatePaymentRequest(body: unknown): { valid: boolean; error?: string; data?: PaymentRequest } {
+  if (!body || typeof body !== 'object') {
+    return { valid: false, error: 'Invalid request body' };
+  }
+
+  const b = body as Record<string, unknown>;
+
+  // Validate planId
+  const planId = sanitizeString(b.planId, 36);
+  if (!planId || !isValidUUID(planId)) {
+    return { valid: false, error: 'planId must be a valid UUID' };
+  }
+
+  // Validate billingPeriod
+  if (b.billingPeriod !== 'monthly' && b.billingPeriod !== 'yearly') {
+    return { valid: false, error: 'billingPeriod must be "monthly" or "yearly"' };
+  }
+
+  // Validate provider
+  if (b.provider !== 'click' && b.provider !== 'payme') {
+    return { valid: false, error: 'provider must be "click" or "payme"' };
+  }
+
+  // Validate returnUrl (optional)
+  let returnUrl: string | undefined;
+  if (b.returnUrl !== undefined && b.returnUrl !== null) {
+    const sanitizedUrl = sanitizeString(b.returnUrl, 2000);
+    if (sanitizedUrl) {
+      try {
+        const urlObj = new URL(sanitizedUrl);
+        if (!['http:', 'https:'].includes(urlObj.protocol)) {
+          return { valid: false, error: 'returnUrl must use http or https protocol' };
+        }
+        returnUrl = sanitizedUrl;
+      } catch {
+        return { valid: false, error: 'returnUrl must be a valid URL' };
+      }
+    }
+  }
+
+  return {
+    valid: true,
+    data: {
+      planId,
+      billingPeriod: b.billingPeriod,
+      provider: b.provider,
+      returnUrl
+    }
+  };
 }
 
 serve(async (req) => {
@@ -54,7 +115,33 @@ serve(async (req) => {
     }
 
     const userId = claimsData.claims.sub;
-    const { planId, billingPeriod, provider, returnUrl } = await req.json() as PaymentRequest;
+    if (!userId || !isValidUUID(userId)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid user session' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
+      );
+    }
+
+    // Parse and validate request body
+    let rawBody: unknown;
+    try {
+      rawBody = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON body' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    const validation = validatePaymentRequest(rawBody);
+    if (!validation.valid || !validation.data) {
+      return new Response(
+        JSON.stringify({ error: validation.error || 'Invalid request' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    const { planId, billingPeriod, provider, returnUrl } = validation.data;
 
     console.log(`Creating payment: user=${userId}, plan=${planId}, period=${billingPeriod}, provider=${provider}`);
 
@@ -64,16 +151,25 @@ serve(async (req) => {
       .from('subscription_plans')
       .select('*')
       .eq('id', planId)
+      .eq('is_active', true)
       .single();
 
     if (planError || !plan) {
       return new Response(
-        JSON.stringify({ error: 'Plan not found' }),
+        JSON.stringify({ error: 'Plan not found or inactive' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
       );
     }
 
     const amount = billingPeriod === 'monthly' ? plan.price_monthly : plan.price_yearly;
+    
+    // Validate amount
+    if (typeof amount !== 'number' || amount <= 0 || amount > 100000000) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid plan pricing' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
 
     // Cancel existing active subscription if any
     await adminClient
@@ -173,7 +269,7 @@ serve(async (req) => {
       }
     });
 
-    console.log(`Payment URL generated: ${paymentUrl}`);
+    console.log(`Payment URL generated successfully`);
 
     return new Response(
       JSON.stringify({
@@ -206,8 +302,6 @@ interface ClickPaymentParams {
 }
 
 function generateClickPaymentUrl(params: ClickPaymentParams): string {
-  // Click payment URL format
-  // https://my.click.uz/services/pay?service_id=XXX&merchant_id=XXX&amount=XXX&transaction_param=XXX&return_url=XXX
   const clickBaseUrl = 'https://my.click.uz/services/pay';
   
   const queryParams = new URLSearchParams({
@@ -216,8 +310,6 @@ function generateClickPaymentUrl(params: ClickPaymentParams): string {
     amount: params.amount.toString(),
     transaction_param: params.transactionId,
     return_url: params.returnUrl,
-    // Additional optional params
-    // card_type: '8600' // Humo/UzCard
   });
 
   return `${clickBaseUrl}?${queryParams.toString()}`;
@@ -232,8 +324,6 @@ interface PaymePaymentParams {
 }
 
 function generatePaymePaymentUrl(params: PaymePaymentParams): string {
-  // Payme payment URL format
-  // https://checkout.paycom.uz/base64_encoded_params
   const paymeData = {
     m: params.merchantId,
     ac: {

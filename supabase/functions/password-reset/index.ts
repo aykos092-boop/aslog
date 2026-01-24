@@ -11,6 +11,111 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const TELEGRAM_BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN');
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 
+// Input validation helpers
+function sanitizeString(str: unknown, maxLength: number): string | null {
+  if (typeof str !== 'string') return null;
+  return str.replace(/[\x00-\x1F\x7F]/g, '').trim().slice(0, maxLength);
+}
+
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email) && email.length <= 254;
+}
+
+function isValidPhone(phone: string): boolean {
+  // Allow digits, +, -, (), and spaces, length 7-20
+  const phoneRegex = /^[\d\s+\-()]{7,20}$/;
+  return phoneRegex.test(phone);
+}
+
+function isValidHexToken(token: string): boolean {
+  const hexRegex = /^[a-f0-9]{64}$/i;
+  return hexRegex.test(token);
+}
+
+function isValidOTP(otp: string): boolean {
+  const otpRegex = /^\d{6}$/;
+  return otpRegex.test(otp);
+}
+
+function isStrongPassword(password: string): boolean {
+  // At least 8 characters, max 128
+  return password.length >= 8 && password.length <= 128;
+}
+
+interface RequestPayload {
+  action: 'request' | 'reset';
+  email?: string;
+  phone?: string;
+  token?: string;
+  newPassword?: string;
+  otp?: string;
+}
+
+function validateRequestPayload(body: unknown): { valid: boolean; error?: string; data?: RequestPayload } {
+  if (!body || typeof body !== 'object') {
+    return { valid: false, error: 'Invalid request body' };
+  }
+
+  const b = body as Record<string, unknown>;
+
+  // Validate action
+  if (b.action !== 'request' && b.action !== 'reset') {
+    return { valid: false, error: 'action must be "request" or "reset"' };
+  }
+
+  const result: RequestPayload = { action: b.action };
+
+  // Validate email if provided
+  if (b.email !== undefined && b.email !== null) {
+    const email = sanitizeString(b.email, 254);
+    if (!email || !isValidEmail(email)) {
+      return { valid: false, error: 'Invalid email format' };
+    }
+    result.email = email;
+  }
+
+  // Validate phone if provided
+  if (b.phone !== undefined && b.phone !== null) {
+    const phone = sanitizeString(b.phone, 20);
+    if (!phone || !isValidPhone(phone)) {
+      return { valid: false, error: 'Invalid phone format' };
+    }
+    result.phone = phone;
+  }
+
+  // Validate token if provided
+  if (b.token !== undefined && b.token !== null) {
+    const token = sanitizeString(b.token, 64);
+    if (!token || !isValidHexToken(token)) {
+      return { valid: false, error: 'Invalid token format' };
+    }
+    result.token = token;
+  }
+
+  // Validate OTP if provided
+  if (b.otp !== undefined && b.otp !== null) {
+    const otp = sanitizeString(b.otp, 6);
+    if (!otp || !isValidOTP(otp)) {
+      return { valid: false, error: 'OTP must be exactly 6 digits' };
+    }
+    result.otp = otp;
+  }
+
+  // Validate newPassword if provided
+  if (b.newPassword !== undefined && b.newPassword !== null) {
+    if (typeof b.newPassword !== 'string') {
+      return { valid: false, error: 'newPassword must be a string' };
+    }
+    if (!isStrongPassword(b.newPassword)) {
+      return { valid: false, error: 'Password must be 8-128 characters' };
+    }
+    result.newPassword = b.newPassword;
+  }
+
+  return { valid: true, data: result };
+}
+
 // Generate secure token
 function generateToken(): string {
   const array = new Uint8Array(32);
@@ -93,7 +198,27 @@ serve(async (req) => {
 
   try {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    const { action, email, phone, token, newPassword, otp } = await req.json();
+    
+    // Parse and validate request body
+    let rawBody: unknown;
+    try {
+      rawBody = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid JSON body' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    const validation = validateRequestPayload(rawBody);
+    if (!validation.valid || !validation.data) {
+      return new Response(
+        JSON.stringify({ success: false, error: validation.error || 'Invalid request' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      );
+    }
+
+    const { action, email, phone, token, newPassword, otp } = validation.data;
 
     // ACTION: Request password reset
     if (action === 'request') {
@@ -123,16 +248,18 @@ serve(async (req) => {
         if (profile) userId = profile.user_id;
 
         // Check for linked Telegram
-        const { data: telegram } = await supabase
-          .from('telegram_users')
-          .select('telegram_id')
-          .eq('user_id', userId)
-          .single();
-        if (telegram) telegramChatId = telegram.telegram_id;
+        if (userId) {
+          const { data: telegram } = await supabase
+            .from('telegram_users')
+            .select('telegram_id')
+            .eq('user_id', userId)
+            .single();
+          if (telegram) telegramChatId = telegram.telegram_id;
+        }
       }
 
       if (!userId) {
-        // Don't reveal if user exists
+        // Don't reveal if user exists - always return success
         return new Response(
           JSON.stringify({ success: true, message: 'If the account exists, reset instructions have been sent' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -173,7 +300,8 @@ serve(async (req) => {
 
       // Send via appropriate channel
       if (email) {
-        const resetUrl = `${req.headers.get('origin') || 'https://asialog.uz'}/reset-password?token=${resetToken}`;
+        const origin = req.headers.get('origin') || 'https://asialog.uz';
+        const resetUrl = `${origin}/reset-password?token=${resetToken}`;
         await sendResetEmail(email, resetUrl);
       }
 
@@ -215,14 +343,6 @@ serve(async (req) => {
       if ((!token && !otp) || !newPassword) {
         return new Response(
           JSON.stringify({ success: false, error: 'Token/OTP and new password required' }),
-          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
-        );
-      }
-
-      // Validate password strength
-      if (newPassword.length < 8) {
-        return new Response(
-          JSON.stringify({ success: false, error: 'Password must be at least 8 characters' }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
         );
       }
