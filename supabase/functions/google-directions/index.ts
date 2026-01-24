@@ -31,14 +31,6 @@ interface RouteResult {
     endLocation: { lat: number; lng: number };
     maneuver?: string;
     travelMode?: string;
-    transitDetails?: {
-      lineName: string;
-      lineColor: string;
-      vehicleType: string;
-      departureStop: string;
-      arrivalStop: string;
-      numStops: number;
-    };
   }[];
   bounds: {
     northeast: { lat: number; lng: number };
@@ -46,59 +38,6 @@ interface RouteResult {
   };
   summary: string;
   warnings: string[];
-}
-
-// Decode Google's encoded polyline format
-function decodePolyline(encoded: string): { lat: number; lng: number }[] {
-  const points: { lat: number; lng: number }[] = [];
-  let index = 0;
-  let lat = 0;
-  let lng = 0;
-
-  while (index < encoded.length) {
-    let shift = 0;
-    let result = 0;
-    let byte: number;
-
-    do {
-      byte = encoded.charCodeAt(index++) - 63;
-      result |= (byte & 0x1f) << shift;
-      shift += 5;
-    } while (byte >= 0x20);
-
-    const dlat = result & 1 ? ~(result >> 1) : result >> 1;
-    lat += dlat;
-
-    shift = 0;
-    result = 0;
-
-    do {
-      byte = encoded.charCodeAt(index++) - 63;
-      result |= (byte & 0x1f) << shift;
-      shift += 5;
-    } while (byte >= 0x20);
-
-    const dlng = result & 1 ? ~(result >> 1) : result >> 1;
-    lng += dlng;
-
-    points.push({
-      lat: lat / 1e5,
-      lng: lng / 1e5,
-    });
-  }
-
-  return points;
-}
-
-// Map travel mode to Routes API format
-function mapTravelMode(mode: TravelMode): string {
-  const modeMap: Record<TravelMode, string> = {
-    driving: "DRIVE",
-    walking: "WALK",
-    transit: "TRANSIT",
-    bicycling: "BICYCLE",
-  };
-  return modeMap[mode] || "DRIVE";
 }
 
 // Format duration text from seconds
@@ -119,18 +58,195 @@ function formatDistance(meters: number): string {
   return `${meters} м`;
 }
 
-// Extract maneuver from instruction
-function extractManeuver(instruction: string): string | undefined {
-  const lowerInstr = instruction.toLowerCase();
-  if (lowerInstr.includes("turn left") || lowerInstr.includes("поверните налево")) return "turn-left";
-  if (lowerInstr.includes("turn right") || lowerInstr.includes("поверните направо")) return "turn-right";
-  if (lowerInstr.includes("u-turn") || lowerInstr.includes("разворот")) return "uturn";
-  if (lowerInstr.includes("merge") || lowerInstr.includes("въезд")) return "merge";
-  if (lowerInstr.includes("roundabout") || lowerInstr.includes("кольц")) return "roundabout";
-  if (lowerInstr.includes("straight") || lowerInstr.includes("прямо")) return "straight";
+// Map OSRM profile
+function mapOsrmProfile(mode: TravelMode): string {
+  const profileMap: Record<TravelMode, string> = {
+    driving: "driving",
+    walking: "foot",
+    transit: "driving",
+    bicycling: "bike",
+  };
+  return profileMap[mode] || "driving";
+}
+
+// Translate OSRM maneuver to readable instruction
+function translateManeuver(type: string, modifier: string | undefined, name: string, language: string): string {
+  const isRu = language === "ru";
+  const roadName = name ? (isRu ? `на ${name}` : `onto ${name}`) : "";
+  
+  const translations: Record<string, Record<string, string>> = {
+    turn: {
+      left: isRu ? `Поверните налево ${roadName}` : `Turn left ${roadName}`,
+      right: isRu ? `Поверните направо ${roadName}` : `Turn right ${roadName}`,
+      "slight left": isRu ? `Плавно налево ${roadName}` : `Slight left ${roadName}`,
+      "slight right": isRu ? `Плавно направо ${roadName}` : `Slight right ${roadName}`,
+      "sharp left": isRu ? `Резко налево ${roadName}` : `Sharp left ${roadName}`,
+      "sharp right": isRu ? `Резко направо ${roadName}` : `Sharp right ${roadName}`,
+      uturn: isRu ? "Развернитесь" : "Make a U-turn",
+      straight: isRu ? `Продолжайте прямо ${roadName}` : `Continue straight ${roadName}`,
+    },
+    "new name": {
+      default: isRu ? `Продолжайте по ${name || "дороге"}` : `Continue on ${name || "road"}`,
+    },
+    depart: {
+      default: isRu ? `Начните движение ${roadName}` : `Start driving ${roadName}`,
+    },
+    arrive: {
+      default: isRu ? "Вы прибыли в пункт назначения" : "You have arrived",
+    },
+    merge: {
+      default: isRu ? `Влейтесь в поток ${roadName}` : `Merge ${roadName}`,
+    },
+    "on ramp": {
+      default: isRu ? `Выезжайте на съезд ${roadName}` : `Take the ramp ${roadName}`,
+    },
+    "off ramp": {
+      default: isRu ? `Съезжайте ${roadName}` : `Exit ${roadName}`,
+    },
+    fork: {
+      left: isRu ? `Держитесь левее ${roadName}` : `Keep left ${roadName}`,
+      right: isRu ? `Держитесь правее ${roadName}` : `Keep right ${roadName}`,
+      "slight left": isRu ? `Держитесь левее ${roadName}` : `Keep left ${roadName}`,
+      "slight right": isRu ? `Держитесь правее ${roadName}` : `Keep right ${roadName}`,
+    },
+    "end of road": {
+      left: isRu ? `В конце дороги поверните налево ${roadName}` : `At end of road turn left ${roadName}`,
+      right: isRu ? `В конце дороги поверните направо ${roadName}` : `At end of road turn right ${roadName}`,
+    },
+    continue: {
+      default: isRu ? `Продолжайте движение ${roadName}` : `Continue ${roadName}`,
+    },
+    roundabout: {
+      default: isRu ? `На круговом движении ${roadName}` : `At roundabout ${roadName}`,
+    },
+    rotary: {
+      default: isRu ? `На круговом движении ${roadName}` : `At roundabout ${roadName}`,
+    },
+    "roundabout turn": {
+      default: isRu ? `На круговом движении ${roadName}` : `At roundabout ${roadName}`,
+    },
+    notification: {
+      default: "",
+    },
+  };
+
+  const typeTranslations = translations[type];
+  if (typeTranslations) {
+    const instruction = typeTranslations[modifier || "default"] || typeTranslations["default"];
+    if (instruction) return instruction.trim();
+  }
+
+  return isRu ? `Продолжайте движение ${roadName}`.trim() : `Continue ${roadName}`.trim();
+}
+
+// Convert OSRM maneuver type to standard maneuver
+function getManeuverType(type: string, modifier: string | undefined): string | undefined {
+  if (type === "turn") {
+    if (modifier?.includes("left")) return "turn-left";
+    if (modifier?.includes("right")) return "turn-right";
+    if (modifier === "uturn") return "uturn";
+    if (modifier === "straight") return "straight";
+  }
+  if (type === "roundabout" || type === "rotary") return "roundabout";
+  if (type === "merge") return "merge";
+  if (type === "fork") {
+    if (modifier?.includes("left")) return "fork-left";
+    if (modifier?.includes("right")) return "fork-right";
+  }
+  if (type === "depart") return "depart";
+  if (type === "arrive") return "arrive";
   return undefined;
 }
 
+// Geocode address using Nominatim
+async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
+  try {
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
+    const response = await fetch(url, {
+      headers: { "User-Agent": "CargoApp/1.0" },
+    });
+    const data = await response.json();
+    if (data && data.length > 0) {
+      return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+    }
+  } catch (e) {
+    console.error("Geocoding error:", e);
+  }
+  return null;
+}
+
+// Get route using OSRM
+async function getOsrmRoute(
+  origin: { lat: number; lng: number },
+  destination: { lat: number; lng: number },
+  mode: TravelMode,
+  alternatives: boolean,
+  language: string
+): Promise<RouteResult[]> {
+  const profile = mapOsrmProfile(mode);
+  const url = `https://router.project-osrm.org/route/v1/${profile}/${origin.lng},${origin.lat};${destination.lng},${destination.lat}?overview=full&geometries=geojson&steps=true&alternatives=${alternatives}`;
+
+  console.log("Fetching from OSRM:", url);
+
+  const response = await fetch(url);
+  const data = await response.json();
+
+  if (data.code !== "Ok" || !data.routes || data.routes.length === 0) {
+    throw new Error(data.message || "No routes found");
+  }
+
+  return data.routes.map((route: any) => {
+    const points = route.geometry.coordinates.map((coord: number[]) => ({
+      lat: coord[1],
+      lng: coord[0],
+    }));
+
+    // Calculate bounds
+    let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+    points.forEach((p: { lat: number; lng: number }) => {
+      minLat = Math.min(minLat, p.lat);
+      maxLat = Math.max(maxLat, p.lat);
+      minLng = Math.min(minLng, p.lng);
+      maxLng = Math.max(maxLng, p.lng);
+    });
+
+    // Parse steps from all legs
+    const steps: RouteResult["steps"] = [];
+    route.legs.forEach((leg: any) => {
+      leg.steps.forEach((step: any) => {
+        const maneuver = step.maneuver;
+        steps.push({
+          instruction: translateManeuver(maneuver.type, maneuver.modifier, step.name || "", language),
+          distance: { text: formatDistance(step.distance), value: Math.round(step.distance) },
+          duration: { text: formatDuration(step.duration), value: Math.round(step.duration) },
+          startLocation: { lat: maneuver.location[1], lng: maneuver.location[0] },
+          endLocation: { 
+            lat: step.intersections?.[step.intersections.length - 1]?.location?.[1] || maneuver.location[1],
+            lng: step.intersections?.[step.intersections.length - 1]?.location?.[0] || maneuver.location[0],
+          },
+          maneuver: getManeuverType(maneuver.type, maneuver.modifier),
+          travelMode: mode.toUpperCase(),
+        });
+      });
+    });
+
+    return {
+      distance: { text: formatDistance(route.distance), value: Math.round(route.distance) },
+      duration: { text: formatDuration(route.duration), value: Math.round(route.duration) },
+      durationInTraffic: { text: formatDuration(route.duration), value: Math.round(route.duration) },
+      startAddress: "",
+      endAddress: "",
+      points,
+      steps,
+      bounds: {
+        northeast: { lat: maxLat, lng: maxLng },
+        southwest: { lat: minLat, lng: minLng },
+      },
+      summary: route.legs.map((l: any) => l.summary).join(" → ") || "",
+      warnings: [],
+    };
+  });
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -138,20 +254,9 @@ serve(async (req) => {
   }
 
   try {
-    const apiKey = Deno.env.get("GOOGLE_MAPS_API_KEY");
-    
-    if (!apiKey) {
-      console.error("GOOGLE_MAPS_API_KEY is not set");
-      return new Response(
-        JSON.stringify({ error: "Google Maps API key not configured" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     const { 
       origin, 
       destination, 
-      waypoints, 
       mode = "driving", 
       alternatives = false,
       language = "ru" 
@@ -159,142 +264,42 @@ serve(async (req) => {
 
     console.log("Directions request:", { origin, destination, mode, alternatives, language });
 
-    // Format location for Routes API
-    const formatLocation = (loc: { lat: number; lng: number } | string): any => {
-      if (typeof loc === "string") {
-        return { address: loc };
+    // Resolve coordinates
+    let originCoords: { lat: number; lng: number };
+    let destCoords: { lat: number; lng: number };
+
+    if (typeof origin === "string") {
+      const geocoded = await geocodeAddress(origin);
+      if (!geocoded) {
+        return new Response(
+          JSON.stringify({ error: "Could not geocode origin address", status: "GEOCODE_FAILED" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
-      return {
-        location: {
-          latLng: {
-            latitude: loc.lat,
-            longitude: loc.lng,
-          },
-        },
-      };
-    };
-
-    // Build request body for Routes API
-    const requestBody: any = {
-      origin: formatLocation(origin),
-      destination: formatLocation(destination),
-      travelMode: mapTravelMode(mode),
-      routingPreference: mode === "driving" ? "TRAFFIC_AWARE" : undefined,
-      computeAlternativeRoutes: alternatives,
-      languageCode: language,
-      units: "METRIC",
-    };
-
-    // Add waypoints if provided
-    if (waypoints && waypoints.length > 0) {
-      requestBody.intermediates = waypoints.map(w => ({
-        location: {
-          latLng: {
-            latitude: w.lat,
-            longitude: w.lng,
-          },
-        },
-      }));
+      originCoords = geocoded;
+    } else {
+      originCoords = origin;
     }
 
-    const url = "https://routes.googleapis.com/directions/v2:computeRoutes";
-
-    console.log("Fetching directions from Routes API...");
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Goog-Api-Key": apiKey,
-        "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.polyline.encodedPolyline,routes.legs.duration,routes.legs.distanceMeters,routes.legs.startLocation,routes.legs.endLocation,routes.legs.steps.navigationInstruction,routes.legs.steps.distanceMeters,routes.legs.steps.staticDuration,routes.legs.steps.startLocation,routes.legs.steps.endLocation,routes.viewport,routes.warnings,routes.description",
-      },
-      body: JSON.stringify(requestBody),
-    });
-
-    const data = await response.json();
-
-    if (data.error) {
-      console.error("Routes API error:", data.error);
-      return new Response(
-        JSON.stringify({ 
-          error: `Routes API error: ${data.error.status}`, 
-          message: data.error.message,
-          status: data.error.status
-        }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (typeof destination === "string") {
+      const geocoded = await geocodeAddress(destination);
+      if (!geocoded) {
+        return new Response(
+          JSON.stringify({ error: "Could not geocode destination address", status: "GEOCODE_FAILED" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      destCoords = geocoded;
+    } else {
+      destCoords = destination;
     }
 
-    if (!data.routes || data.routes.length === 0) {
-      console.error("No routes found");
-      return new Response(
-        JSON.stringify({ error: "No routes found", status: "ZERO_RESULTS" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+    console.log("Resolved coordinates:", { origin: originCoords, destination: destCoords });
 
-    // Parse all routes
-    const routes: RouteResult[] = data.routes.map((route: any) => {
-      const leg = route.legs?.[0] || {};
-      const durationSeconds = parseInt(route.duration?.replace("s", "") || "0");
-      const distanceMeters = route.distanceMeters || 0;
+    // Use OSRM for routing (free, no API key required)
+    const routes = await getOsrmRoute(originCoords, destCoords, mode, alternatives, language);
 
-      return {
-        distance: { 
-          text: formatDistance(distanceMeters), 
-          value: distanceMeters 
-        },
-        duration: { 
-          text: formatDuration(durationSeconds), 
-          value: durationSeconds 
-        },
-        durationInTraffic: { 
-          text: formatDuration(durationSeconds), 
-          value: durationSeconds 
-        },
-        startAddress: "",
-        endAddress: "",
-        points: route.polyline?.encodedPolyline 
-          ? decodePolyline(route.polyline.encodedPolyline) 
-          : [],
-        steps: (leg.steps || []).map((step: any) => {
-          const stepDuration = parseInt(step.staticDuration?.replace("s", "") || "0");
-          const stepDistance = step.distanceMeters || 0;
-          const instruction = step.navigationInstruction?.instructions || "";
-          
-          return {
-            instruction: instruction.replace(/<[^>]*>/g, ""),
-            distance: { text: formatDistance(stepDistance), value: stepDistance },
-            duration: { text: formatDuration(stepDuration), value: stepDuration },
-            startLocation: step.startLocation?.latLng 
-              ? { lat: step.startLocation.latLng.latitude, lng: step.startLocation.latLng.longitude }
-              : { lat: 0, lng: 0 },
-            endLocation: step.endLocation?.latLng
-              ? { lat: step.endLocation.latLng.latitude, lng: step.endLocation.latLng.longitude }
-              : { lat: 0, lng: 0 },
-            maneuver: extractManeuver(instruction),
-            travelMode: mode.toUpperCase(),
-          };
-        }),
-        bounds: route.viewport ? {
-          northeast: { 
-            lat: route.viewport.high?.latitude || 0, 
-            lng: route.viewport.high?.longitude || 0 
-          },
-          southwest: { 
-            lat: route.viewport.low?.latitude || 0, 
-            lng: route.viewport.low?.longitude || 0 
-          },
-        } : {
-          northeast: { lat: 0, lng: 0 },
-          southwest: { lat: 0, lng: 0 },
-        },
-        summary: route.description || "",
-        warnings: route.warnings || [],
-      };
-    });
-
-    console.log("Directions fetched successfully:", {
+    console.log("Routes fetched successfully:", {
       routesCount: routes.length,
       mainRoute: {
         distance: routes[0].distance.text,
