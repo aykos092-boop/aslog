@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
 import { useToast } from "@/hooks/use-toast";
-import { useFirebaseAuth } from "@/contexts/useFirebaseAuth";
-import { BRAND } from "@/constants/brand";
+import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
+import { BRAND } from "@/config/brand";
 import { z } from "zod";
 import { Mail, Phone, KeyRound, Eye, EyeOff, Loader2, ArrowLeft, User, Truck, Gift } from "lucide-react";
 
@@ -23,7 +22,7 @@ type AuthView = "login" | "signup" | "reset" | "phone-verify";
 type Role = "client" | "carrier";
 
 const AuthPage = () => {
-  const { t } = useTranslation();
+  // Removed useTranslation - using direct text
   const { toast } = useToast();
   const navigate = useNavigate();
   const {
