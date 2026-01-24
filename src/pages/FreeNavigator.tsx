@@ -248,12 +248,27 @@ export default function FreeNavigator() {
     L.control.zoom({ position: "topright" }).addTo(map);
     
     mapRef.current = map;
+
+    // Leaflet can initialize before the container gets its final size (especially in flex layouts).
+    // Force a re-measure to ensure tiles render.
+    setTimeout(() => {
+      map.invalidateSize();
+    }, 0);
     
     return () => {
       map.remove();
       mapRef.current = null;
     };
   }, []);
+
+  // Recalculate map size when layout changes (mobile panel expand/collapse)
+  useEffect(() => {
+    if (!mapRef.current) return;
+    const id = window.setTimeout(() => {
+      mapRef.current?.invalidateSize();
+    }, 200);
+    return () => window.clearTimeout(id);
+  }, [panelExpanded]);
 
   // Auto-fill from URL params (order data)
   useEffect(() => {
@@ -816,8 +831,8 @@ export default function FreeNavigator() {
       </div>
 
       {/* Map */}
-      <div className="flex-1 relative">
-        <div ref={mapContainerRef} className="h-full w-full" />
+      <div className="flex-1 relative min-h-[320px]">
+        <div ref={mapContainerRef} className="absolute inset-0" />
         
         {/* Map controls */}
         <div className="absolute top-4 right-4 flex flex-col gap-2 z-[1000]">
