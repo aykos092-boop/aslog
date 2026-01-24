@@ -73,15 +73,6 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.settings": "Настройки",
     "nav.admin": "Админ-панель",
     
-    // Sidebar Categories
-    "sidebar.category.main": "Основное",
-    "sidebar.category.orders": "Заказы",
-    "sidebar.category.work": "Работа",
-    "sidebar.category.finance": "Финансы",
-    "sidebar.category.management": "Управление",
-    "sidebar.category.analytics": "Аналитика",
-    "sidebar.category.settings": "Настройки",
-    
     // Roles
     "role.client": "Клиент",
     "role.carrier": "Перевозчик",
@@ -657,15 +648,6 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.settings": "Sozlamalar",
     "nav.admin": "Admin paneli",
     
-    // Sidebar Categories
-    "sidebar.category.main": "Asosiy",
-    "sidebar.category.orders": "Buyurtmalar",
-    "sidebar.category.work": "Ish",
-    "sidebar.category.finance": "Moliya",
-    "sidebar.category.management": "Boshqaruv",
-    "sidebar.category.analytics": "Tahlil",
-    "sidebar.category.settings": "Sozlamalar",
-    
     // Roles
     "role.client": "Mijoz",
     "role.carrier": "Haydovchi",
@@ -1233,15 +1215,6 @@ const translations: Record<Language, Record<string, string>> = {
     "nav.deals": "Deals",
     "nav.settings": "Settings",
     "nav.admin": "Admin Panel",
-    
-    // Sidebar Categories
-    "sidebar.category.main": "Main",
-    "sidebar.category.orders": "Orders",
-    "sidebar.category.work": "Work",
-    "sidebar.category.finance": "Finance",
-    "sidebar.category.management": "Management",
-    "sidebar.category.analytics": "Analytics",
-    "sidebar.category.settings": "Settings",
     
     // Roles
     "role.client": "Client",
