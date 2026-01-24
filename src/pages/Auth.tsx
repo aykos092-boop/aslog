@@ -1,3 +1,512 @@
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { useToast } from "@/hooks/use-toast";
+import { useFirebaseAuth } from "@/contexts/useFirebaseAuth"; // Путь к твоему контексту
+import { BRAND } from "@/constants/brand"; // Твои константы
+import { z } from "zod";
+import { Mail, Phone, KeyRound, Eye, EyeOff, Loader2, ArrowLeft, User, Truck, Gift } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+
+// Схемы валидации
+const emailSchema = z.string().email("Неверный формат почты");
+const passwordSchema = z.string().min(6, "Пароль минимум 6 символов");
+const nameSchema = z.string().min(2, "Имя слишком короткое");
+
+type AuthView = "login" | "signup" | "reset" | "phone-verify";
+type Role = "client" | "carrier";
+
+const AuthPage = () => {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const {
+    signInWithEmail,
+    signUpWithEmail,
+    signInWithGoogle,
+    sendPhoneCode,
+    verifyPhoneCode,
+    sendPasswordReset,
+    loading: authLoading,
+  } = useFirebaseAuth();
+
+  // Состояния форм
+  const [authView, setAuthView] = useState<AuthView>("login");
+  const [authMethod, setAuthMethod] = useState<"email" | "phone">("email");
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Поля ввода
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupName, setSignupName] = useState("");
+  const [signupRole, setSignupRole] = useState<Role>("client");
+  const [resetEmail, setResetEmail] = useState("");
+
+  // Телефон
+  const [loginPhone, setLoginPhone] = useState("");
+  const [signupPhone, setSignupPhone] = useState("");
+  const [phoneOtp, setPhoneOtp] = useState("");
+  const [confirmationResult, setConfirmationResult] = useState<any>(null);
+  const [pendingRole, setPendingRole] = useState<Role>("client");
+
+  // Загрузки
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [signupLoading, setSignupLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [phoneVerifyLoading, setPhoneVerifyLoading] = useState(false);
+
+  // Рефералы
+  const [referralCode, setReferralCode] = useState("");
+  const [referralValid, setReferralValid] = useState<boolean | null>(null);
+
+  // Форматирование телефона
+  const formatPhone = (val: string) => {
+    const digits = val.replace(/\D/g, "");
+    if (digits.length <= 12) return "+" + digits;
+    return "+" + digits.slice(0, 12);
+  };
+
+  // Хендлеры
+  const handleEmailLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginLoading(true);
+    const { error } = await signInWithEmail(loginEmail, loginPassword);
+    if (error) {
+      toast({ title: "Ошибка входа", description: error.message, variant: "destructive" });
+    } else {
+      navigate("/dashboard");
+    }
+    setLoginLoading(false);
+  };
+
+  const handleEmailSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      emailSchema.parse(signupEmail);
+      passwordSchema.parse(signupPassword);
+      nameSchema.parse(signupName);
+    } catch (err: any) {
+      toast({ title: "Ошибка валидации", description: err.errors[0].message, variant: "destructive" });
+      return;
+    }
+
+    setSignupLoading(true);
+    const { error } = await signUpWithEmail(signupEmail, signupPassword, signupRole, signupName);
+    if (error) {
+      toast({ title: "Ошибка регистрации", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Успешно!", description: "Добро пожаловать в систему" });
+      navigate("/dashboard");
+    }
+    setSignupLoading(false);
+  };
+
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    const { error } = await signInWithGoogle(signupRole);
+    if (error) {
+      toast({ title: "Ошибка Google", description: error.message, variant: "destructive" });
+    } else {
+      navigate("/dashboard");
+    }
+    setGoogleLoading(false);
+  };
+
+  const handlePhoneSubmit = async (e: React.FormEvent, type: "login" | "signup") => {
+    e.preventDefault();
+    const phone = type === "login" ? loginPhone : signupPhone;
+    const phoneDigits = phone.replace(/\D/g, "");
+
+    if (phoneDigits.length < 11) {
+      toast({ title: "Ошибка", description: "Введите корректный номер", variant: "destructive" });
+      return;
+    }
+
+    setSignupLoading(true); // Общий лоадер для телефона
+    setPendingRole(signupRole);
+
+    const { error, confirmationResult: result } = await sendPhoneCode("+" + phoneDigits, "recaptcha-container");
+
+    if (error) {
+      toast({ title: "Ошибка SMS", description: error.message, variant: "destructive" });
+    } else if (result) {
+      setConfirmationResult(result);
+      setAuthView("phone-verify");
+    }
+    setSignupLoading(false);
+  };
+
+  const handleVerifyPhoneCode = async () => {
+    if (!confirmationResult) return;
+    setPhoneVerifyLoading(true);
+    const { error } = await verifyPhoneCode(confirmationResult, phoneOtp, pendingRole);
+    if (error) {
+      toast({ title: "Ошибка кода", description: "Неверный код", variant: "destructive" });
+    } else {
+      navigate("/dashboard");
+    }
+    setPhoneVerifyLoading(false);
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+    const { error } = await sendPasswordReset(resetEmail);
+    if (error) {
+      toast({ title: "Ошибка", description: error.message, variant: "destructive" });
+    } else {
+      setResetSent(true);
+    }
+    setResetLoading(false);
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // --- RENDERS ---
+
+  if (authView === "reset") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <Button
+            variant="ghost"
+            className="mb-4"
+            onClick={() => {
+              setAuthView("login");
+              setResetSent(false);
+            }}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" /> Назад
+          </Button>
+          <Card className="border-2 shadow-xl">
+            <CardHeader className="text-center">
+              <CardTitle className="flex items-center justify-center gap-2">
+                <KeyRound className="w-5 h-5" /> Восстановление пароля
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {resetSent ? (
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-green-100 flex items-center justify-center">
+                    <Mail className="w-8 h-8 text-green-600" />
+                  </div>
+                  <p>Инструкции отправлены на {resetEmail}</p>
+                  <Button className="w-full" onClick={() => setAuthView("login")}>
+                    Вернуться к входу
+                  </Button>
+                </div>
+              ) : (
+                <form onSubmit={handlePasswordReset} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Email</Label>
+                    <Input type="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} required />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={resetLoading}>
+                    {resetLoading ? <Loader2 className="animate-spin" /> : "Отправить ссылку"}
+                  </Button>
+                </form>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (authView === "phone-verify") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <Button variant="ghost" className="mb-4" onClick={() => setAuthView("login")}>
+            <ArrowLeft className="w-4 h-4 mr-2" /> Назад
+          </Button>
+          <Card className="border-2">
+            <CardHeader className="text-center">
+              <CardTitle>Подтверждение номера</CardTitle>
+              <CardDescription>Введите 6-значный код из SMS</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex justify-center">
+                <InputOTP maxLength={6} value={phoneOtp} onChange={setPhoneOtp}>
+                  <InputOTPGroup>
+                    {[0, 1, 2, 3, 4, 5].map((i) => (
+                      <InputOTPSlot key={i} index={i} />
+                    ))}
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+              <Button
+                className="w-full"
+                onClick={handleVerifyPhoneCode}
+                disabled={phoneOtp.length !== 6 || phoneVerifyLoading}
+              >
+                {phoneVerifyLoading ? <Loader2 className="animate-spin" /> : "Подтвердить"}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background flex items-center justify-center p-4 relative">
+      <div id="recaptcha-container"></div>
+
+      <div className="relative w-full max-w-md">
+        <Card className="border-2 shadow-2xl backdrop-blur-sm bg-white/90">
+          <CardHeader className="text-center">
+            <CardTitle className="text-3xl font-black text-primary">{BRAND.name}</CardTitle>
+            <CardDescription>{t("auth.platformDesc")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs value={authView as string} onValueChange={(v) => setAuthView(v as AuthView)} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="login">{t("auth.loginTab")}</TabsTrigger>
+                <TabsTrigger value="signup">{t("auth.registerTab")}</TabsTrigger>
+              </TabsList>
+
+              {/* LOGIN SECTION */}
+              <TabsContent value="login">
+                <div className="flex rounded-lg border p-1 gap-1 mb-4 bg-muted/50">
+                  <Button
+                    variant={authMethod === "email" ? "default" : "ghost"}
+                    className="flex-1"
+                    size="sm"
+                    onClick={() => setAuthMethod("email")}
+                  >
+                    Email
+                  </Button>
+                  <Button
+                    variant={authMethod === "phone" ? "default" : "ghost"}
+                    className="flex-1"
+                    size="sm"
+                    onClick={() => setAuthMethod("phone")}
+                  >
+                    Телефон
+                  </Button>
+                </div>
+
+                {authMethod === "email" ? (
+                  <form onSubmit={handleEmailLogin} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>{t("auth.email")}</Label>
+                      <Input type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <Label>{t("auth.password")}</Label>
+                        <Button variant="link" className="h-auto p-0 text-xs" onClick={() => setAuthView("reset")}>
+                          Забыли пароль?
+                        </Button>
+                      </div>
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          value={loginPassword}
+                          onChange={(e) => setLoginPassword(e.target.value)}
+                          required
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="absolute right-0 top-0 h-full"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </Button>
+                      </div>
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loginLoading}>
+                      {loginLoading ? <Loader2 className="animate-spin" /> : t("auth.login")}
+                    </Button>
+                  </form>
+                ) : (
+                  <form onSubmit={(e) => handlePhoneSubmit(e, "login")} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Телефон</Label>
+                      <Input
+                        type="tel"
+                        value={loginPhone}
+                        onChange={(e) => setLoginPhone(formatPhone(e.target.value))}
+                        placeholder="+998"
+                        required
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loginLoading}>
+                      Получить код
+                    </Button>
+                  </form>
+                )}
+              </TabsContent>
+
+              {/* SIGNUP SECTION */}
+              <TabsContent value="signup">
+                <div className="flex rounded-lg border p-1 gap-1 mb-4 bg-muted/50">
+                  <Button
+                    variant={authMethod === "email" ? "default" : "ghost"}
+                    className="flex-1"
+                    size="sm"
+                    onClick={() => setAuthMethod("email")}
+                  >
+                    Email
+                  </Button>
+                  <Button
+                    variant={authMethod === "phone" ? "default" : "ghost"}
+                    className="flex-1"
+                    size="sm"
+                    onClick={() => setAuthMethod("phone")}
+                  >
+                    Телефон
+                  </Button>
+                </div>
+
+                <form
+                  onSubmit={authMethod === "email" ? handleEmailSignup : (e) => handlePhoneSubmit(e, "signup")}
+                  className="space-y-4"
+                >
+                  {authMethod === "email" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>{t("profile.name")}</Label>
+                        <Input value={signupName} onChange={(e) => setSignupName(e.target.value)} required />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{t("auth.email")}</Label>
+                        <Input
+                          type="email"
+                          value={signupEmail}
+                          onChange={(e) => setSignupEmail(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{t("auth.password")}</Label>
+                        <Input
+                          type="password"
+                          value={signupPassword}
+                          onChange={(e) => setSignupPassword(e.target.value)}
+                          required
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {authMethod === "phone" && (
+                    <div className="space-y-2">
+                      <Label>Телефон</Label>
+                      <Input
+                        type="tel"
+                        value={signupPhone}
+                        onChange={(e) => setSignupPhone(formatPhone(e.target.value))}
+                        placeholder="+998"
+                        required
+                      />
+                    </div>
+                  )}
+
+                  <div className="space-y-3">
+                    <Label>{t("auth.selectRole")}</Label>
+                    <RadioGroup
+                      value={signupRole}
+                      onValueChange={(v) => setSignupRole(v as Role)}
+                      className="grid grid-cols-2 gap-4"
+                    >
+                      <div className="relative">
+                        <RadioGroupItem value="client" id="r-client" className="peer sr-only" />
+                        <Label
+                          htmlFor="r-client"
+                          className="flex flex-col items-center p-3 border-2 rounded-xl cursor-pointer peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5"
+                        >
+                          <User className="mb-1" /> <span className="text-sm font-bold">Клиент</span>
+                        </Label>
+                      </div>
+                      <div className="relative">
+                        <RadioGroupItem value="carrier" id="r-carrier" className="peer sr-only" />
+                        <Label
+                          htmlFor="r-carrier"
+                          className="flex flex-col items-center p-3 border-2 rounded-xl cursor-pointer peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5"
+                        >
+                          <Truck className="mb-1" /> <span className="text-sm font-bold">Водитель</span>
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1 text-xs">
+                      <Gift size={12} /> {t("auth.referralCode")}
+                    </Label>
+                    <Input
+                      placeholder="Код друга"
+                      value={referralCode}
+                      onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                      className={referralValid === false ? "border-red-500" : ""}
+                    />
+                  </div>
+
+                  <Button type="submit" className="w-full" disabled={signupLoading}>
+                    {signupLoading ? <Loader2 className="animate-spin" /> : t("auth.signup")}
+                  </Button>
+                </form>
+              </TabsContent>
+            </Tabs>
+
+            <div className="relative my-6 text-center text-xs uppercase">
+              <span className="bg-white px-2 text-muted-foreground relative z-10">или</span>
+              <div className="absolute top-1/2 w-full border-t border-muted"></div>
+            </div>
+
+            <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={googleLoading}>
+              {googleLoading ? (
+                <Loader2 className="animate-spin mr-2" />
+              ) : (
+                <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
+                  <path
+                    fill="currentColor"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                  />
+                </svg>
+              )}
+              Google
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+export default AuthPage;
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useFirebaseAuth } from "@/hooks/useFirebaseAuth";
@@ -15,6 +524,515 @@ import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { BRAND } from "@/config/brand";
 import { ConfirmationResult } from "@/lib/firebase";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { useToast } from "@/hooks/use-toast";
+import { useFirebaseAuth } from "@/contexts/useFirebaseAuth"; // Путь к твоему контексту
+import { BRAND } from "@/constants/brand"; // Твои константы
+import { z } from "zod";
+import { Mail, Phone, KeyRound, Eye, EyeOff, Loader2, ArrowLeft, User, Truck, Gift } from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+
+// Схемы валидации
+const emailSchema = z.string().email("Неверный формат почты");
+const passwordSchema = z.string().min(6, "Пароль минимум 6 символов");
+const nameSchema = z.string().min(2, "Имя слишком короткое");
+
+type AuthView = "login" | "signup" | "reset" | "phone-verify";
+type Role = "client" | "carrier";
+
+const AuthPage = () => {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const {
+    signInWithEmail,
+    signUpWithEmail,
+    signInWithGoogle,
+    sendPhoneCode,
+    verifyPhoneCode,
+    sendPasswordReset,
+    loading: authLoading,
+  } = useFirebaseAuth();
+
+  // Состояния форм
+  const [authView, setAuthView] = useState<AuthView>("login");
+  const [authMethod, setAuthMethod] = useState<"email" | "phone">("email");
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Поля ввода
+  const [loginEmail, setLoginEmail] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupName, setSignupName] = useState("");
+  const [signupRole, setSignupRole] = useState<Role>("client");
+  const [resetEmail, setResetEmail] = useState("");
+
+  // Телефон
+  const [loginPhone, setLoginPhone] = useState("");
+  const [signupPhone, setSignupPhone] = useState("");
+  const [phoneOtp, setPhoneOtp] = useState("");
+  const [confirmationResult, setConfirmationResult] = useState<any>(null);
+  const [pendingRole, setPendingRole] = useState<Role>("client");
+
+  // Загрузки
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [signupLoading, setSignupLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [phoneVerifyLoading, setPhoneVerifyLoading] = useState(false);
+
+  // Рефералы
+  const [referralCode, setReferralCode] = useState("");
+  const [referralValid, setReferralValid] = useState<boolean | null>(null);
+
+  // Форматирование телефона
+  const formatPhone = (val: string) => {
+    const digits = val.replace(/\D/g, "");
+    if (digits.length <= 12) return "+" + digits;
+    return "+" + digits.slice(0, 12);
+  };
+
+  // Хендлеры
+  const handleEmailLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginLoading(true);
+    const { error } = await signInWithEmail(loginEmail, loginPassword);
+    if (error) {
+      toast({ title: "Ошибка входа", description: error.message, variant: "destructive" });
+    } else {
+      navigate("/dashboard");
+    }
+    setLoginLoading(false);
+  };
+
+  const handleEmailSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      emailSchema.parse(signupEmail);
+      passwordSchema.parse(signupPassword);
+      nameSchema.parse(signupName);
+    } catch (err: any) {
+      toast({ title: "Ошибка валидации", description: err.errors[0].message, variant: "destructive" });
+      return;
+    }
+
+    setSignupLoading(true);
+    const { error } = await signUpWithEmail(signupEmail, signupPassword, signupRole, signupName);
+    if (error) {
+      toast({ title: "Ошибка регистрации", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Успешно!", description: "Добро пожаловать в систему" });
+      navigate("/dashboard");
+    }
+    setSignupLoading(false);
+  };
+
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    const { error } = await signInWithGoogle(signupRole);
+    if (error) {
+      toast({ title: "Ошибка Google", description: error.message, variant: "destructive" });
+    } else {
+      navigate("/dashboard");
+    }
+    setGoogleLoading(false);
+  };
+
+  const handlePhoneSubmit = async (e: React.FormEvent, type: "login" | "signup") => {
+    e.preventDefault();
+    const phone = type === "login" ? loginPhone : signupPhone;
+    const phoneDigits = phone.replace(/\D/g, "");
+
+    if (phoneDigits.length < 11) {
+      toast({ title: "Ошибка", description: "Введите корректный номер", variant: "destructive" });
+      return;
+    }
+
+    setSignupLoading(true); // Общий лоадер для телефона
+    setPendingRole(signupRole);
+
+    const { error, confirmationResult: result } = await sendPhoneCode("+" + phoneDigits, "recaptcha-container");
+
+    if (error) {
+      toast({ title: "Ошибка SMS", description: error.message, variant: "destructive" });
+    } else if (result) {
+      setConfirmationResult(result);
+      setAuthView("phone-verify");
+    }
+    setSignupLoading(false);
+  };
+
+  const handleVerifyPhoneCode = async () => {
+    if (!confirmationResult) return;
+    setPhoneVerifyLoading(true);
+    const { error } = await verifyPhoneCode(confirmationResult, phoneOtp, pendingRole);
+    if (error) {
+      toast({ title: "Ошибка кода", description: "Неверный код", variant: "destructive" });
+    } else {
+      navigate("/dashboard");
+    }
+    setPhoneVerifyLoading(false);
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setResetLoading(true);
+    const { error } = await sendPasswordReset(resetEmail);
+    if (error) {
+      toast({ title: "Ошибка", description: error.message, variant: "destructive" });
+    } else {
+      setResetSent(true);
+    }
+    setResetLoading(false);
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // --- RENDERS ---
+
+  if (authView === "reset") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <Button
+            variant="ghost"
+            className="mb-4"
+            onClick={() => {
+              setAuthView("login");
+              setResetSent(false);
+            }}
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" /> Назад
+          </Button>
+          <Card className="border-2 shadow-xl">
+            <CardHeader className="text-center">
+              <CardTitle className="flex items-center justify-center gap-2">
+                <KeyRound className="w-5 h-5" /> Восстановление пароля
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {resetSent ? (
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-green-100 flex items-center justify-center">
+                    <Mail className="w-8 h-8 text-green-600" />
+                  </div>
+                  <p>Инструкции отправлены на {resetEmail}</p>
+                  <Button className="w-full" onClick={() => setAuthView("login")}>
+                    Вернуться к входу
+                  </Button>
+                </div>
+              ) : (
+                <form onSubmit={handlePasswordReset} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Email</Label>
+                    <Input type="email" value={resetEmail} onChange={(e) => setResetEmail(e.target.value)} required />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={resetLoading}>
+                    {resetLoading ? <Loader2 className="animate-spin" /> : "Отправить ссылку"}
+                  </Button>
+                </form>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (authView === "phone-verify") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <Button variant="ghost" className="mb-4" onClick={() => setAuthView("login")}>
+            <ArrowLeft className="w-4 h-4 mr-2" /> Назад
+          </Button>
+          <Card className="border-2">
+            <CardHeader className="text-center">
+              <CardTitle>Подтверждение номера</CardTitle>
+              <CardDescription>Введите 6-значный код из SMS</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex justify-center">
+                <InputOTP maxLength={6} value={phoneOtp} onChange={setPhoneOtp}>
+                  <InputOTPGroup>
+                    {[0, 1, 2, 3, 4, 5].map((i) => (
+                      <InputOTPSlot key={i} index={i} />
+                    ))}
+                  </InputOTPGroup>
+                </InputOTP>
+              </div>
+              <Button
+                className="w-full"
+                onClick={handleVerifyPhoneCode}
+                disabled={phoneOtp.length !== 6 || phoneVerifyLoading}
+              >
+                {phoneVerifyLoading ? <Loader2 className="animate-spin" /> : "Подтвердить"}
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background flex items-center justify-center p-4 relative">
+      <div id="recaptcha-container"></div>
+
+      <div className="relative w-full max-w-md">
+        <Card className="border-2 shadow-2xl backdrop-blur-sm bg-white/90">
+          <CardHeader className="text-center">
+            <CardTitle className="text-3xl font-black text-primary">{BRAND.name}</CardTitle>
+            <CardDescription>{t("auth.platformDesc")}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs value={authView as string} onValueChange={(v) => setAuthView(v as AuthView)} className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="login">{t("auth.loginTab")}</TabsTrigger>
+                <TabsTrigger value="signup">{t("auth.registerTab")}</TabsTrigger>
+              </TabsList>
+
+              {/* LOGIN SECTION */}
+              <TabsContent value="login">
+                <div className="flex rounded-lg border p-1 gap-1 mb-4 bg-muted/50">
+                  <Button
+                    variant={authMethod === "email" ? "default" : "ghost"}
+                    className="flex-1"
+                    size="sm"
+                    onClick={() => setAuthMethod("email")}
+                  >
+                    Email
+                  </Button>
+                  <Button
+                    variant={authMethod === "phone" ? "default" : "ghost"}
+                    className="flex-1"
+                    size="sm"
+                    onClick={() => setAuthMethod("phone")}
+                  >
+                    Телефон
+                  </Button>
+                </div>
+
+                {authMethod === "email" ? (
+                  <form onSubmit={handleEmailLogin} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>{t("auth.email")}</Label>
+                      <Input type="email" value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} required />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between">
+                        <Label>{t("auth.password")}</Label>
+                        <Button variant="link" className="h-auto p-0 text-xs" onClick={() => setAuthView("reset")}>
+                          Забыли пароль?
+                        </Button>
+                      </div>
+                      <div className="relative">
+                        <Input
+                          type={showPassword ? "text" : "password"}
+                          value={loginPassword}
+                          onChange={(e) => setLoginPassword(e.target.value)}
+                          required
+                        />
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          className="absolute right-0 top-0 h-full"
+                          onClick={() => setShowPassword(!showPassword)}
+                        >
+                          {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </Button>
+                      </div>
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loginLoading}>
+                      {loginLoading ? <Loader2 className="animate-spin" /> : t("auth.login")}
+                    </Button>
+                  </form>
+                ) : (
+                  <form onSubmit={(e) => handlePhoneSubmit(e, "login")} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Телефон</Label>
+                      <Input
+                        type="tel"
+                        value={loginPhone}
+                        onChange={(e) => setLoginPhone(formatPhone(e.target.value))}
+                        placeholder="+998"
+                        required
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={loginLoading}>
+                      Получить код
+                    </Button>
+                  </form>
+                )}
+              </TabsContent>
+
+              {/* SIGNUP SECTION */}
+              <TabsContent value="signup">
+                <div className="flex rounded-lg border p-1 gap-1 mb-4 bg-muted/50">
+                  <Button
+                    variant={authMethod === "email" ? "default" : "ghost"}
+                    className="flex-1"
+                    size="sm"
+                    onClick={() => setAuthMethod("email")}
+                  >
+                    Email
+                  </Button>
+                  <Button
+                    variant={authMethod === "phone" ? "default" : "ghost"}
+                    className="flex-1"
+                    size="sm"
+                    onClick={() => setAuthMethod("phone")}
+                  >
+                    Телефон
+                  </Button>
+                </div>
+
+                <form
+                  onSubmit={authMethod === "email" ? handleEmailSignup : (e) => handlePhoneSubmit(e, "signup")}
+                  className="space-y-4"
+                >
+                  {authMethod === "email" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>{t("profile.name")}</Label>
+                        <Input value={signupName} onChange={(e) => setSignupName(e.target.value)} required />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{t("auth.email")}</Label>
+                        <Input
+                          type="email"
+                          value={signupEmail}
+                          onChange={(e) => setSignupEmail(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>{t("auth.password")}</Label>
+                        <Input
+                          type="password"
+                          value={signupPassword}
+                          onChange={(e) => setSignupPassword(e.target.value)}
+                          required
+                        />
+                      </div>
+                    </>
+                  )}
+
+                  {authMethod === "phone" && (
+                    <div className="space-y-2">
+                      <Label>Телефон</Label>
+                      <Input
+                        type="tel"
+                        value={signupPhone}
+                        onChange={(e) => setSignupPhone(formatPhone(e.target.value))}
+                        placeholder="+998"
+                        required
+                      />
+                    </div>
+                  )}
+
+                  <div className="space-y-3">
+                    <Label>{t("auth.selectRole")}</Label>
+                    <RadioGroup
+                      value={signupRole}
+                      onValueChange={(v) => setSignupRole(v as Role)}
+                      className="grid grid-cols-2 gap-4"
+                    >
+                      <div className="relative">
+                        <RadioGroupItem value="client" id="r-client" className="peer sr-only" />
+                        <Label
+                          htmlFor="r-client"
+                          className="flex flex-col items-center p-3 border-2 rounded-xl cursor-pointer peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5"
+                        >
+                          <User className="mb-1" /> <span className="text-sm font-bold">Клиент</span>
+                        </Label>
+                      </div>
+                      <div className="relative">
+                        <RadioGroupItem value="carrier" id="r-carrier" className="peer sr-only" />
+                        <Label
+                          htmlFor="r-carrier"
+                          className="flex flex-col items-center p-3 border-2 rounded-xl cursor-pointer peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/5"
+                        >
+                          <Truck className="mb-1" /> <span className="text-sm font-bold">Водитель</span>
+                        </Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-1 text-xs">
+                      <Gift size={12} /> {t("auth.referralCode")}
+                    </Label>
+                    <Input
+                      placeholder="Код друга"
+                      value={referralCode}
+                      onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                      className={referralValid === false ? "border-red-500" : ""}
+                    />
+                  </div>
+
+                  <Button type="submit" className="w-full" disabled={signupLoading}>
+                    {signupLoading ? <Loader2 className="animate-spin" /> : t("auth.signup")}
+                  </Button>
+                </form>
+              </TabsContent>
+            </Tabs>
+
+            <div className="relative my-6 text-center text-xs uppercase">
+              <span className="bg-white px-2 text-muted-foreground relative z-10">или</span>
+              <div className="absolute top-1/2 w-full border-t border-muted"></div>
+            </div>
+
+            <Button variant="outline" className="w-full" onClick={handleGoogleSignIn} disabled={googleLoading}>
+              {googleLoading ? (
+                <Loader2 className="animate-spin mr-2" />
+              ) : (
+                <svg className="w-4 h-4 mr-2" viewBox="0 0 24 24">
+                  <path
+                    fill="currentColor"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                  />
+                  <path
+                    fill="currentColor"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                  />
+                </svg>
+              )}
+              Google
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+export default AuthPage;
 
 type Role = "client" | "carrier";
 type AuthMethod = "email" | "phone";
@@ -31,7 +1049,7 @@ const AuthPage = () => {
     sendPhoneCode,
     verifyPhoneCode,
     sendPasswordReset,
-    loading: authLoading
+    loading: authLoading,
   } = useFirebaseAuth();
   const { toast } = useToast();
   const { t } = useLanguage();
@@ -92,45 +1110,41 @@ const AuthPage = () => {
       setReferralValid(null);
       return;
     }
-    const { data } = await supabase
-      .from("profiles")
-      .select("user_id")
-      .eq("referral_code", code.toUpperCase())
-      .single();
+    const { data } = await supabase.from("profiles").select("user_id").eq("referral_code", code.toUpperCase()).single();
     setReferralValid(!!data);
   };
 
   const formatPhone = (value: string) => {
-    const digits = value.replace(/\D/g, '');
-    if (digits.startsWith('998')) {
+    const digits = value.replace(/\D/g, "");
+    if (digits.startsWith("998")) {
       const rest = digits.slice(3);
-      let formatted = '+998';
-      if (rest.length > 0) formatted += ' ' + rest.slice(0, 2);
-      if (rest.length > 2) formatted += ' ' + rest.slice(2, 5);
-      if (rest.length > 5) formatted += ' ' + rest.slice(5, 7);
-      if (rest.length > 7) formatted += ' ' + rest.slice(7, 9);
+      let formatted = "+998";
+      if (rest.length > 0) formatted += " " + rest.slice(0, 2);
+      if (rest.length > 2) formatted += " " + rest.slice(2, 5);
+      if (rest.length > 5) formatted += " " + rest.slice(5, 7);
+      if (rest.length > 7) formatted += " " + rest.slice(7, 9);
       return formatted;
     }
-    if (!digits.startsWith('998') && digits.length > 0) {
-      return '+998 ' + digits.slice(0, 9);
+    if (!digits.startsWith("998") && digits.length > 0) {
+      return "+998 " + digits.slice(0, 9);
     }
     return value;
   };
 
   const getFirebaseErrorMessage = (code: string) => {
     const errors: Record<string, string> = {
-      'auth/user-not-found': 'Пользователь не найден',
-      'auth/wrong-password': 'Неверный пароль',
-      'auth/email-already-in-use': 'Email уже используется',
-      'auth/weak-password': 'Слишком простой пароль',
-      'auth/invalid-email': 'Неверный формат email',
-      'auth/too-many-requests': 'Слишком много попыток. Попробуйте позже',
-      'auth/invalid-verification-code': 'Неверный код подтверждения',
-      'auth/invalid-phone-number': 'Неверный номер телефона',
-      'auth/popup-closed-by-user': 'Окно авторизации закрыто',
-      'auth/invalid-credential': 'Неверные данные для входа',
+      "auth/user-not-found": "Пользователь не найден",
+      "auth/wrong-password": "Неверный пароль",
+      "auth/email-already-in-use": "Email уже используется",
+      "auth/weak-password": "Слишком простой пароль",
+      "auth/invalid-email": "Неверный формат email",
+      "auth/too-many-requests": "Слишком много попыток. Попробуйте позже",
+      "auth/invalid-verification-code": "Неверный код подтверждения",
+      "auth/invalid-phone-number": "Неверный номер телефона",
+      "auth/popup-closed-by-user": "Окно авторизации закрыто",
+      "auth/invalid-credential": "Неверные данные для входа",
     };
-    return errors[code] || 'Произошла ошибка';
+    return errors[code] || "Произошла ошибка";
   };
 
   const handleEmailLogin = async (e: React.FormEvent) => {
@@ -143,7 +1157,7 @@ const AuthPage = () => {
         toast({
           title: t("auth.validationError"),
           description: error.errors[0].message,
-          variant: "destructive"
+          variant: "destructive",
         });
         return;
       }
@@ -155,7 +1169,7 @@ const AuthPage = () => {
       toast({
         title: t("auth.loginError"),
         description: getFirebaseErrorMessage((error as any).code),
-        variant: "destructive"
+        variant: "destructive",
       });
     } else {
       toast({ title: t("auth.welcome"), description: t("auth.loginSuccess") });
@@ -166,25 +1180,25 @@ const AuthPage = () => {
 
   const handlePhoneLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const phoneDigits = loginPhone.replace(/\D/g, '');
+    const phoneDigits = loginPhone.replace(/\D/g, "");
     if (phoneDigits.length < 12) {
       toast({
         title: "Ошибка",
         description: "Введите полный номер телефона",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
     setLoginLoading(true);
     setPendingRole("client");
-    const { error, confirmationResult: result } = await sendPhoneCode('+' + phoneDigits, 'recaptcha-container');
-    
+    const { error, confirmationResult: result } = await sendPhoneCode("+" + phoneDigits, "recaptcha-container");
+
     if (error) {
       toast({
         title: "Ошибка",
         description: getFirebaseErrorMessage((error as any).code),
-        variant: "destructive"
+        variant: "destructive",
       });
       setLoginLoading(false);
       return;
@@ -202,12 +1216,12 @@ const AuthPage = () => {
 
     setPhoneVerifyLoading(true);
     const { error } = await verifyPhoneCode(confirmationResult, phoneOtp, pendingRole);
-    
+
     if (error) {
       toast({
         title: "Ошибка",
         description: getFirebaseErrorMessage((error as any).code),
-        variant: "destructive"
+        variant: "destructive",
       });
     } else {
       toast({ title: "Успешно!", description: "Вы вошли в систему" });
@@ -223,7 +1237,7 @@ const AuthPage = () => {
       toast({
         title: t("auth.loginError"),
         description: getFirebaseErrorMessage((error as any).code),
-        variant: "destructive"
+        variant: "destructive",
       });
       setGoogleLoading(false);
     }
@@ -240,7 +1254,7 @@ const AuthPage = () => {
         toast({
           title: t("auth.validationError"),
           description: error.errors[0].message,
-          variant: "destructive"
+          variant: "destructive",
         });
         return;
       }
@@ -248,12 +1262,12 @@ const AuthPage = () => {
 
     setSignupLoading(true);
     const { error } = await signUpWithEmail(signupEmail, signupPassword, signupRole, signupName);
-    
+
     if (error) {
       toast({
         title: t("auth.registrationError"),
         description: getFirebaseErrorMessage((error as any).code),
-        variant: "destructive"
+        variant: "destructive",
       });
       setSignupLoading(false);
       return;
@@ -261,7 +1275,7 @@ const AuthPage = () => {
 
     toast({
       title: t("auth.registrationSuccess"),
-      description: t("auth.welcomeToPlatform")
+      description: t("auth.welcomeToPlatform"),
     });
     navigate("/dashboard");
     setSignupLoading(false);
@@ -269,40 +1283,40 @@ const AuthPage = () => {
 
   const handlePhoneSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    const phoneDigits = signupPhone.replace(/\D/g, '');
+    const phoneDigits = signupPhone.replace(/\D/g, "");
     if (phoneDigits.length < 12) {
       toast({
         title: "Ошибка",
         description: "Введите полный номер телефона",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
     setSignupLoading(true);
     setPendingRole(signupRole);
-    
+
     try {
-      const { error, confirmationResult: result } = await sendPhoneCode('+' + phoneDigits, 'recaptcha-container');
-      
+      const { error, confirmationResult: result } = await sendPhoneCode("+" + phoneDigits, "recaptcha-container");
+
       if (error) {
         console.error("Phone signup error:", error);
-        const errorCode = (error as any).code || '';
+        const errorCode = (error as any).code || "";
         let errorMessage = getFirebaseErrorMessage(errorCode);
-        
+
         // More specific error messages
-        if (errorCode === 'auth/invalid-app-credential' || errorCode === 'auth/operation-not-allowed') {
+        if (errorCode === "auth/invalid-app-credential" || errorCode === "auth/operation-not-allowed") {
           errorMessage = "Телефонная аутентификация не настроена. Используйте Email или Google.";
-        } else if (errorCode === 'auth/captcha-check-failed') {
+        } else if (errorCode === "auth/captcha-check-failed") {
           errorMessage = "Ошибка проверки reCAPTCHA. Попробуйте снова.";
-        } else if (errorCode === 'auth/quota-exceeded') {
+        } else if (errorCode === "auth/quota-exceeded") {
           errorMessage = "Превышен лимит SMS. Попробуйте позже.";
         }
-        
+
         toast({
           title: "Ошибка отправки кода",
           description: errorMessage,
-          variant: "destructive"
+          variant: "destructive",
         });
         setSignupLoading(false);
         return;
@@ -313,7 +1327,7 @@ const AuthPage = () => {
         setAuthView("phone-verify");
         toast({
           title: "Код отправлен",
-          description: "Введите код из SMS"
+          description: "Введите код из SMS",
         });
       }
     } catch (err: any) {
@@ -321,7 +1335,7 @@ const AuthPage = () => {
       toast({
         title: "Ошибка",
         description: "Телефонная аутентификация недоступна. Используйте Email или Google.",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
     setSignupLoading(false);
@@ -336,7 +1350,7 @@ const AuthPage = () => {
         toast({
           title: t("auth.validationError"),
           description: error.errors[0].message,
-          variant: "destructive"
+          variant: "destructive",
         });
         return;
       }
@@ -344,18 +1358,18 @@ const AuthPage = () => {
 
     setResetLoading(true);
     const { error } = await sendPasswordReset(resetEmail);
-    
+
     if (error) {
       toast({
         title: "Ошибка",
         description: getFirebaseErrorMessage((error as any).code),
-        variant: "destructive"
+        variant: "destructive",
       });
     } else {
       setResetSent(true);
       toast({
         title: "Письмо отправлено!",
-        description: "Проверьте почту для восстановления пароля"
+        description: "Проверьте почту для восстановления пароля",
       });
     }
     setResetLoading(false);
@@ -385,9 +1399,7 @@ const AuthPage = () => {
                 <KeyRound className="w-5 h-5" />
                 Восстановление пароля
               </CardTitle>
-              <CardDescription>
-                Введите email для получения ссылки восстановления
-              </CardDescription>
+              <CardDescription>Введите email для получения ссылки восстановления</CardDescription>
             </CardHeader>
             <CardContent>
               {resetSent ? (
@@ -396,10 +1408,15 @@ const AuthPage = () => {
                     <Mail className="w-8 h-8 text-green-600 dark:text-green-400" />
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    Письмо отправлено на <strong>{resetEmail}</strong>. 
-                    Проверьте почту и следуйте инструкциям.
+                    Письмо отправлено на <strong>{resetEmail}</strong>. Проверьте почту и следуйте инструкциям.
                   </p>
-                  <Button variant="outline" onClick={() => { setResetSent(false); setAuthView("login"); }}>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setResetSent(false);
+                      setAuthView("login");
+                    }}
+                  >
                     Вернуться к входу
                   </Button>
                 </div>
@@ -434,7 +1451,14 @@ const AuthPage = () => {
       <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background flex items-center justify-center p-4">
         <div id="recaptcha-container"></div>
         <div className="w-full max-w-md">
-          <Button variant="ghost" className="mb-4" onClick={() => { setAuthView("login"); setPhoneOtp(""); }}>
+          <Button
+            variant="ghost"
+            className="mb-4"
+            onClick={() => {
+              setAuthView("login");
+              setPhoneOtp("");
+            }}
+          >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Назад
           </Button>
@@ -445,9 +1469,7 @@ const AuthPage = () => {
                 <Phone className="w-5 h-5" />
                 Подтверждение номера
               </CardTitle>
-              <CardDescription>
-                Введите 6-значный код из SMS
-              </CardDescription>
+              <CardDescription>Введите 6-значный код из SMS</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="flex justify-center">
@@ -462,9 +1484,9 @@ const AuthPage = () => {
                   </InputOTPGroup>
                 </InputOTP>
               </div>
-              
-              <Button 
-                className="w-full" 
+
+              <Button
+                className="w-full"
                 onClick={handleVerifyPhoneCode}
                 disabled={phoneOtp.length !== 6 || phoneVerifyLoading}
               >
@@ -480,10 +1502,22 @@ const AuthPage = () => {
   // Google Icon Component
   const GoogleIcon = () => (
     <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
-      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+      <path
+        fill="#4285F4"
+        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+      />
+      <path
+        fill="#EA4335"
+        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+      />
     </svg>
   );
 
@@ -522,27 +1556,27 @@ const AuthPage = () => {
                 <div className="flex rounded-lg border p-1 gap-1 mb-4">
                   <Button
                     type="button"
-                    variant={authMethod === 'email' ? 'default' : 'ghost'}
+                    variant={authMethod === "email" ? "default" : "ghost"}
                     className="flex-1"
                     size="sm"
-                    onClick={() => setAuthMethod('email')}
+                    onClick={() => setAuthMethod("email")}
                   >
                     <Mail className="w-4 h-4 mr-2" />
                     Email
                   </Button>
                   <Button
                     type="button"
-                    variant={authMethod === 'phone' ? 'default' : 'ghost'}
+                    variant={authMethod === "phone" ? "default" : "ghost"}
                     className="flex-1"
                     size="sm"
-                    onClick={() => setAuthMethod('phone')}
+                    onClick={() => setAuthMethod("phone")}
                   >
                     <Phone className="w-4 h-4 mr-2" />
                     Телефон
                   </Button>
                 </div>
 
-                {authMethod === 'email' ? (
+                {authMethod === "email" ? (
                   <form onSubmit={handleEmailLogin} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="login-email">{t("auth.email")}</Label>
@@ -650,11 +1684,7 @@ const AuthPage = () => {
                   onClick={handleGoogleSignIn}
                   disabled={googleLoading}
                 >
-                  {googleLoading ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <GoogleIcon />
-                  )}
+                  {googleLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <GoogleIcon />}
                   Войти через Google
                 </Button>
               </TabsContent>
@@ -665,27 +1695,27 @@ const AuthPage = () => {
                 <div className="flex rounded-lg border p-1 gap-1 mb-4">
                   <Button
                     type="button"
-                    variant={authMethod === 'email' ? 'default' : 'ghost'}
+                    variant={authMethod === "email" ? "default" : "ghost"}
                     className="flex-1"
                     size="sm"
-                    onClick={() => setAuthMethod('email')}
+                    onClick={() => setAuthMethod("email")}
                   >
                     <Mail className="w-4 h-4 mr-2" />
                     Email
                   </Button>
                   <Button
                     type="button"
-                    variant={authMethod === 'phone' ? 'default' : 'ghost'}
+                    variant={authMethod === "phone" ? "default" : "ghost"}
                     className="flex-1"
                     size="sm"
-                    onClick={() => setAuthMethod('phone')}
+                    onClick={() => setAuthMethod("phone")}
                   >
                     <Phone className="w-4 h-4 mr-2" />
                     Телефон
                   </Button>
                 </div>
 
-                {authMethod === 'email' ? (
+                {authMethod === "email" ? (
                   <form onSubmit={handleEmailSignup} className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="signup-name">{t("profile.name")}</Label>
@@ -755,9 +1785,7 @@ const AuthPage = () => {
                             <User className="w-6 h-6 text-primary" />
                           </div>
                           <span className="font-medium">{t("role.client")}</span>
-                          <span className="text-xs text-muted-foreground text-center">
-                            {t("auth.iOrderDelivery")}
-                          </span>
+                          <span className="text-xs text-muted-foreground text-center">{t("auth.iOrderDelivery")}</span>
                         </Label>
 
                         <Label
@@ -773,9 +1801,7 @@ const AuthPage = () => {
                             <Truck className="w-6 h-6 text-primary" />
                           </div>
                           <span className="font-medium">{t("role.carrier")}</span>
-                          <span className="text-xs text-muted-foreground text-center">
-                            {t("auth.iExecuteOrders")}
-                          </span>
+                          <span className="text-xs text-muted-foreground text-center">{t("auth.iExecuteOrders")}</span>
                         </Label>
                       </RadioGroup>
                     </div>
@@ -797,27 +1823,16 @@ const AuthPage = () => {
                           validateReferralCode(code);
                         }}
                         className={
-                          referralValid === true
-                            ? "border-green-500"
-                            : referralValid === false
-                            ? "border-red-500"
-                            : ""
+                          referralValid === true ? "border-green-500" : referralValid === false ? "border-red-500" : ""
                         }
                       />
-                      {referralValid === true && (
-                        <p className="text-xs text-green-600">✓ {t("auth.codeValid")}</p>
-                      )}
+                      {referralValid === true && <p className="text-xs text-green-600">✓ {t("auth.codeValid")}</p>}
                       {referralValid === false && referralCode && (
                         <p className="text-xs text-red-600">✗ {t("auth.codeNotFound")}</p>
                       )}
                     </div>
 
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      size="lg"
-                      disabled={signupLoading}
-                    >
+                    <Button type="submit" className="w-full" size="lg" disabled={signupLoading}>
                       {signupLoading ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -882,12 +1897,7 @@ const AuthPage = () => {
                       </RadioGroup>
                     </div>
 
-                    <Button
-                      type="submit"
-                      className="w-full"
-                      size="lg"
-                      disabled={signupLoading}
-                    >
+                    <Button type="submit" className="w-full" size="lg" disabled={signupLoading}>
                       {signupLoading ? (
                         <>
                           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -922,11 +1932,7 @@ const AuthPage = () => {
                   onClick={handleGoogleSignIn}
                   disabled={googleLoading}
                 >
-                  {googleLoading ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <GoogleIcon />
-                  )}
+                  {googleLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <GoogleIcon />}
                   Зарегистрироваться через Google
                 </Button>
               </TabsContent>
