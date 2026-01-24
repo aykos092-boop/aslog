@@ -17,6 +17,7 @@ import UserProfile from "./pages/UserProfile";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminLogin from "./pages/AdminLogin";
 import ApiDocs from "./pages/ApiDocs";
+import Subscription from "./pages/Subscription";
 import NotFound from "./pages/NotFound";
 import UnifiedNavigator from "./pages/UnifiedNavigator";
 
@@ -45,6 +46,7 @@ const App = () => (
                 <Route path="/navigator" element={<UnifiedNavigator />} />
                 <Route path="/navigator/:orderId" element={<UnifiedNavigator />} />
                 <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/subscription" element={<Subscription />} />
                 <Route path="/profile" element={<UserProfile />} />
                 <Route path="/profile/:userId" element={<UserProfile />} />
                 <Route path="/api-docs" element={<ApiDocs />} />

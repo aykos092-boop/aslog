@@ -37,6 +37,7 @@ const clientNavItems: NavItem[] = [
   { title: "deals.myDeals", icon: FileText, href: "/dashboard#deals" },
   { title: "favorites.title", icon: Heart, href: "/dashboard#favorites" },
   { title: "orders.createNew", icon: Plus, href: "/dashboard#create-order" },
+  { title: "subscription.title", icon: Wallet, href: "/subscription" },
 ];
 
 const carrierNavItems: NavItem[] = [
@@ -47,6 +48,7 @@ const carrierNavItems: NavItem[] = [
   { title: "carrier.navigation", icon: Navigation, href: "/dashboard#navigation" },
   { title: "carrier.achievements", icon: Star, href: "/dashboard#achievements" },
   { title: "carrier.preferences", icon: Settings, href: "/dashboard#settings" },
+  { title: "subscription.title", icon: Wallet, href: "/subscription" },
 ];
 
 const adminNavItems: NavItem[] = [

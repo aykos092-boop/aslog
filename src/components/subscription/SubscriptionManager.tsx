@@ -11,7 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { 
   Crown, Check, CreditCard, Loader2, Sparkles, 
-  Zap, Building2, AlertCircle
+  Zap, Building2, AlertCircle, ExternalLink
 } from "lucide-react";
 
 interface SubscriptionPlan {
@@ -124,25 +124,21 @@ export const SubscriptionManager = () => {
 
   const handleSelectPlan = (plan: SubscriptionPlan) => {
     if (plan.name === 'basic' || plan.price_monthly === 0) {
-      // Free plan - just subscribe
-      subscribeToPlan(plan, null);
+      // Free plan - just subscribe directly
+      subscribeFreeplan(plan);
     } else {
       setSelectedPlan(plan);
       setIsPaymentDialogOpen(true);
     }
   };
 
-  const subscribeToPlan = async (plan: SubscriptionPlan, provider: 'click' | 'payme' | null) => {
+  const subscribeFreeplan = async (plan: SubscriptionPlan) => {
     if (!user) return;
 
     setProcessing(true);
     try {
       const periodEnd = new Date();
-      if (billingPeriod === 'monthly') {
-        periodEnd.setMonth(periodEnd.getMonth() + 1);
-      } else {
-        periodEnd.setFullYear(periodEnd.getFullYear() + 1);
-      }
+      periodEnd.setFullYear(periodEnd.getFullYear() + 100); // Free plan never expires
 
       // Cancel existing subscription if any
       if (currentSubscription) {
@@ -152,58 +148,68 @@ export const SubscriptionManager = () => {
           .eq('id', currentSubscription.id);
       }
 
-      // Create new subscription
-      const { data: newSub, error } = await supabase
+      // Create free subscription
+      await supabase
         .from('user_subscriptions')
         .insert({
           user_id: user.id,
           plan_id: plan.id,
-          status: provider ? 'pending' : 'active', // Pending if payment required
+          status: 'active',
           current_period_end: periodEnd.toISOString(),
-          payme_subscription_id: provider === 'payme' ? 'pending_' + Date.now() : null,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // If paid plan, show payment message (stub)
-      if (provider && newSub) {
-        const price = billingPeriod === 'monthly' ? plan.price_monthly : plan.price_yearly;
-
-        toast({
-          title: "Перенаправление на оплату",
-          description: `Вы будете перенаправлены на ${provider === 'click' ? 'Click' : 'Payme'} для оплаты ${formatPrice(price)}`,
         });
 
-        // Simulate payment success after 2 seconds (STUB)
-        setTimeout(async () => {
-          await supabase
-            .from('user_subscriptions')
-            .update({ status: 'active' })
-            .eq('id', newSub.id);
+      toast({
+        title: "Подписка активирована!",
+        description: `Вы перешли на план ${plan.display_name || plan.name}`,
+      });
 
-          fetchPlansAndSubscription();
-          
-          toast({
-            title: "Подписка активирована!",
-            description: `План ${plan.display_name || plan.name} успешно оплачен`,
-          });
-        }, 2000);
-      } else {
-        toast({
-          title: "Подписка активирована!",
-          description: `Вы перешли на план ${plan.display_name || plan.name}`,
-        });
-        fetchPlansAndSubscription();
-      }
-
-      setIsPaymentDialogOpen(false);
+      fetchPlansAndSubscription();
     } catch (error) {
       console.error('Subscription error:', error);
       toast({
         title: "Ошибка",
         description: "Не удалось оформить подписку",
+        variant: "destructive"
+      });
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const initiatePayment = async () => {
+    if (!selectedPlan || !user) return;
+
+    setProcessing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('create-payment', {
+        body: {
+          planId: selectedPlan.id,
+          billingPeriod,
+          provider: paymentProvider,
+          returnUrl: window.location.origin + '/subscription',
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.success && data.paymentUrl) {
+        toast({
+          title: "Перенаправление на оплату",
+          description: `Переходим на страницу ${paymentProvider === 'click' ? 'Click' : 'Payme'}...`,
+        });
+
+        // Redirect to payment page
+        window.location.href = data.paymentUrl;
+      } else {
+        throw new Error('Failed to get payment URL');
+      }
+
+      setIsPaymentDialogOpen(false);
+    } catch (error: any) {
+      console.error('Payment error:', error);
+      toast({
+        title: "Ошибка",
+        description: error.message || "Не удалось инициировать оплату",
         variant: "destructive"
       });
     } finally {
@@ -418,10 +424,10 @@ export const SubscriptionManager = () => {
             </div>
           </RadioGroup>
 
-          <div className="p-3 rounded-lg bg-yellow-50 text-yellow-800 flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+          <div className="p-3 rounded-lg bg-blue-50 text-blue-800 flex items-start gap-2">
+            <ExternalLink className="w-4 h-4 mt-0.5 shrink-0" />
             <p className="text-sm">
-              Это демо-версия. Реальная оплата не будет произведена.
+              Вы будете перенаправлены на страницу платежной системы для завершения оплаты.
             </p>
           </div>
           
@@ -430,7 +436,7 @@ export const SubscriptionManager = () => {
               Отмена
             </Button>
             <Button 
-              onClick={() => selectedPlan && subscribeToPlan(selectedPlan, paymentProvider)}
+              onClick={initiatePayment}
               disabled={processing}
             >
               {processing ? (
@@ -438,7 +444,7 @@ export const SubscriptionManager = () => {
               ) : (
                 <>
                   <CreditCard className="w-4 h-4 mr-2" />
-                  Оплатить
+                  Перейти к оплате
                 </>
               )}
             </Button>
