@@ -1,6 +1,11 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
+// Fix Leaflet default marker icons not displaying
+import iconUrl from "leaflet/dist/images/marker-icon.png";
+import iconRetinaUrl from "leaflet/dist/images/marker-icon-2x.png";
+import iconShadow from "leaflet/dist/images/marker-shadow.png";
+
 import { 
   Navigation, MapPin, Clock, ChevronRight, Locate, 
   Volume2, VolumeX, Car, X, ChevronUp, ChevronDown,
@@ -18,6 +23,14 @@ import { useVoiceNavigation } from "@/hooks/useVoiceNavigation";
 import { MapStyleSelector, MapStyle, mapTileUrls } from "@/components/map/MapStyleSelector";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+
+// Fix Leaflet default icon paths
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconUrl,
+  iconRetinaUrl,
+  shadowUrl: iconShadow,
+});
 
 interface RouteStep {
   instruction: string;
@@ -51,9 +64,18 @@ interface FullScreenNavigatorProps {
   pickupAddress: string;
   deliveryAddress: string;
   cargoType?: string;
-  pickupCoords?: { lat: number; lon: number };
-  deliveryCoords?: { lat: number; lon: number };
+  // Standardized to lng (Leaflet convention)
+  pickupCoords?: { lat: number; lon: number } | { lat: number; lng: number };
+  deliveryCoords?: { lat: number; lon: number } | { lat: number; lng: number };
   onClose?: () => void;
+}
+
+// Helper to normalize coordinates (handles both lon and lng)
+function normalizeCoords(coords: { lat: number; lon?: number; lng?: number } | null | undefined): Coords | null {
+  if (!coords) return null;
+  const lng = coords.lng ?? coords.lon;
+  if (lng === undefined) return null;
+  return { lat: coords.lat, lng };
 }
 
 // Maneuver icons mapping
@@ -109,13 +131,13 @@ export const FullScreenNavigator = ({
   const { toast } = useToast();
   const voiceNav = useVoiceNavigation({ enabled: true });
   
-  // State - initialize from props if coordinates provided
+  // State - initialize from props if coordinates provided (use normalizeCoords helper)
   const [currentPosition, setCurrentPosition] = useState<Coords | null>(null);
   const [pickupCoords, setPickupCoords] = useState<Coords | null>(
-    initialPickupCoords ? { lat: initialPickupCoords.lat, lng: initialPickupCoords.lon } : null
+    normalizeCoords(initialPickupCoords)
   );
   const [deliveryCoords, setDeliveryCoords] = useState<Coords | null>(
-    initialDeliveryCoords ? { lat: initialDeliveryCoords.lat, lng: initialDeliveryCoords.lon } : null
+    normalizeCoords(initialDeliveryCoords)
   );
   const [routeData, setRouteData] = useState<RouteData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -143,6 +165,7 @@ export const FullScreenNavigator = ({
   const notifiedDistancesRef = useRef<Set<number>>(new Set());
   const lastSpokenStepRef = useRef<number>(-1);
   const positionHistoryRef = useRef<Coords[]>([]);
+  const trackingActiveRef = useRef<boolean>(false); // Prevent double GPS tracking (StrictMode)
 
   // Geocode address
   const geocodeAddress = useCallback(async (address: string): Promise<Coords | null> => {
@@ -246,7 +269,9 @@ export const FullScreenNavigator = ({
     }, 100);
 
     return () => {
-      if (mapRef.current) {
+      // Safe cleanup - check if Leaflet map is still valid before removing
+      // Prevents crash if remove() called twice (React StrictMode)
+      if (mapRef.current && (mapRef.current as any)._leaflet_id) {
         mapRef.current.remove();
         mapRef.current = null;
       }
@@ -364,8 +389,8 @@ export const FullScreenNavigator = ({
           voiceNav.speakProximityAlert(distanceKm);
         }
 
-        // Check if arrived
-        if (distanceKm <= 0.1) {
+        // Check if arrived (50 meters threshold - more reliable than 100m)
+        if (distanceKm <= 0.05) {
           setArrived(true);
           if (voiceEnabled) {
             voiceNav.speak("Вы прибыли к месту назначения!");
@@ -397,6 +422,12 @@ export const FullScreenNavigator = ({
 
   // Start GPS tracking
   const startTracking = useCallback(() => {
+    // Prevent double tracking (React StrictMode calls effects twice)
+    if (trackingActiveRef.current) {
+      console.log("GPS tracking already active, skipping");
+      return;
+    }
+
     if (!navigator.geolocation) {
       toast({
         title: "Ошибка",
@@ -406,6 +437,7 @@ export const FullScreenNavigator = ({
       return;
     }
 
+    trackingActiveRef.current = true;
     setStartTime(new Date());
     notifiedDistancesRef.current.clear();
     lastSpokenStepRef.current = -1;
@@ -467,24 +499,26 @@ export const FullScreenNavigator = ({
             }).addTo(mapRef.current);
           }
 
-          // Follow driver
+          // Follow driver - use panTo for smoother animation (less laggy than setView)
           if (followDriver) {
-            mapRef.current.setView([pos.lat, pos.lng], 17, { animate: true });
+            mapRef.current.panTo([pos.lat, pos.lng], { animate: true, duration: 0.5 });
           }
         }
 
-        // Update traveled path
+        // Update traveled path - use setLatLngs to avoid memory leak
         if (mapRef.current && positionHistoryRef.current.length > 1) {
-          if (traveledLineRef.current) {
-            mapRef.current.removeLayer(traveledLineRef.current);
-          }
           const traveledPoints = positionHistoryRef.current.map(p => [p.lat, p.lng] as L.LatLngExpression);
-          traveledLineRef.current = L.polyline(traveledPoints, {
-            color: "#10b981",
-            weight: 5,
-            opacity: 0.7,
-            dashArray: "5, 10",
-          }).addTo(mapRef.current);
+          if (traveledLineRef.current) {
+            // Reuse existing polyline - no remove/add = no memory leak
+            traveledLineRef.current.setLatLngs(traveledPoints);
+          } else {
+            traveledLineRef.current = L.polyline(traveledPoints, {
+              color: "#10b981",
+              weight: 5,
+              opacity: 0.7,
+              dashArray: "5, 10",
+            }).addTo(mapRef.current);
+          }
         }
 
         // Calculate distance to destination
@@ -494,9 +528,14 @@ export const FullScreenNavigator = ({
           sendProximityNotification(dist);
         }
 
-        // Fetch route if not loaded
-        if (!routeData && deliveryCoords) {
-          fetchRoute(pos);
+        // Fetch route if not loaded (use functional check to avoid stale closure)
+        if (deliveryCoords) {
+          setRouteData(prev => {
+            if (!prev) {
+              fetchRoute(pos);
+            }
+            return prev;
+          });
         }
       },
       (err) => {
@@ -525,7 +564,7 @@ export const FullScreenNavigator = ({
       title: "🛰️ GPS включён",
       description: "Отслеживание маршрута активно",
     });
-  }, [dealId, deliveryCoords, currentPosition, followDriver, routeData, voiceEnabled, voiceNav, sendProximityNotification, fetchRoute, toast]);
+  }, [dealId, deliveryCoords, currentPosition, followDriver, voiceEnabled, voiceNav, sendProximityNotification, fetchRoute, toast]);
 
   // Stop tracking
   const stopTracking = useCallback(() => {
@@ -533,6 +572,7 @@ export const FullScreenNavigator = ({
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
     }
+    trackingActiveRef.current = false; // Reset guard
     setTracking(false);
     voiceNav.stop();
   }, [voiceNav]);
@@ -569,10 +609,11 @@ export const FullScreenNavigator = ({
     }
   }, [currentPosition, routeData, currentStepIndex, voiceEnabled, voiceNav, tracking]);
 
-  // Center on driver
+  // Center on driver - use panTo for smoother FPS
   const centerOnDriver = () => {
     if (mapRef.current && currentPosition) {
-      mapRef.current.setView([currentPosition.lat, currentPosition.lng], 17, { animate: true });
+      mapRef.current.panTo([currentPosition.lat, currentPosition.lng], { animate: true });
+      mapRef.current.setZoom(17);
       setFollowDriver(true);
     }
   };
