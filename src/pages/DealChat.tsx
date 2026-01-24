@@ -445,25 +445,25 @@ const DealChat = () => {
             </div>
           )}
 
-          {/* GPS Tracking - Driver sees GoogleNavigator, Client sees ClientTrackingPanel */}
+          {/* GPS Tracking - Driver sees Navigator link, Client sees ClientTrackingPanel */}
           {showGpsTracking && (
             isCarrier ? (
-              <div className="flex-1 min-h-0">
-                <GoogleNavigator 
-                  dealId={dealId!}
-                  clientId={deal.client_id}
-                  carrierName={otherParticipantName}
-                  pickupAddress={deal.order?.pickup_address}
-                  deliveryAddress={deal.order?.delivery_address}
-                  pickupCoords={deal.order?.pickup_lat && deal.order?.pickup_lng ? {
-                    lat: deal.order.pickup_lat,
-                    lon: deal.order.pickup_lng
-                  } : undefined}
-                  deliveryCoords={deal.order?.delivery_lat && deal.order?.delivery_lng ? {
-                    lat: deal.order.delivery_lat,
-                    lon: deal.order.delivery_lng
-                  } : undefined}
-                />
+              <div className="flex-1 min-h-0 p-4">
+                <div className="bg-card border rounded-lg p-6 text-center space-y-4">
+                  <Navigation className="w-12 h-12 mx-auto text-primary" />
+                  <h3 className="text-lg font-semibold">Навигация</h3>
+                  <p className="text-muted-foreground text-sm">
+                    {deal.order?.pickup_address} → {deal.order?.delivery_address}
+                  </p>
+                  <Button 
+                    size="lg" 
+                    className="w-full"
+                    onClick={() => navigate(`/navigator/${deal.order_id}`)}
+                  >
+                    <Navigation className="w-4 h-4 mr-2" />
+                    Открыть навигатор
+                  </Button>
+                </div>
               </div>
             ) : (
               <div className="p-4 overflow-y-auto max-h-[500px] lg:max-h-none">
