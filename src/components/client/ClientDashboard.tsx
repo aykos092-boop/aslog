@@ -15,10 +15,10 @@ export const ClientDashboard = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const location = useLocation();
   const { t } = useLanguage();
-
+  
   // Determine active tab from hash
-  const hash = location.hash.replace("#", "") || "orders";
-  const activeTab = ["orders", "deals", "favorites", "calculator", "create-order"].includes(hash) ? hash : "orders";
+  const hash = location.hash.replace('#', '') || 'orders';
+  const activeTab = ['orders', 'deals', 'favorites', 'calculator', 'create-order'].includes(hash) ? hash : 'orders';
 
   const handleOrderCreated = () => {
     setRefreshTrigger((prev) => prev + 1);
@@ -28,40 +28,40 @@ export const ClientDashboard = () => {
     <div className="space-y-6">
       <Tabs defaultValue={activeTab} className="w-full">
         <TabsList className="w-full flex flex-wrap h-auto gap-1 bg-muted/50 p-1 rounded-xl mb-6">
-          <TabsTrigger
-            value="orders"
+          <TabsTrigger 
+            value="orders" 
             className="flex-1 min-w-[100px] gap-2 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg"
           >
             <Package className="w-4 h-4" />
             <span className="hidden sm:inline">{t("orders.myOrders")}</span>
           </TabsTrigger>
-          <TabsTrigger
-            value="deals"
+          <TabsTrigger 
+            value="deals" 
             className="flex-1 min-w-[100px] gap-2 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg"
           >
             <FileText className="w-4 h-4" />
             <span className="hidden sm:inline">{t("deals.myDeals")}</span>
           </TabsTrigger>
-          <TabsTrigger
-            value="favorites"
+          <TabsTrigger 
+            value="favorites" 
             className="flex-1 min-w-[100px] gap-2 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg"
           >
             <Heart className="w-4 h-4" />
             <span className="hidden sm:inline">{t("favorites.title")}</span>
           </TabsTrigger>
-          <TabsTrigger
-            value="calculator"
+          <TabsTrigger 
+            value="calculator" 
             className="flex-1 min-w-[100px] gap-2 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg"
           >
             <Calculator className="w-4 h-4" />
             <span className="hidden sm:inline">{t("calculator.title")}</span>
           </TabsTrigger>
-          <TabsTrigger
-            value="create-order"
+          <TabsTrigger 
+            value="create-order" 
             className="flex-1 min-w-[100px] gap-2 py-2.5 data-[state=active]:bg-background data-[state=active]:shadow-sm rounded-lg"
           >
             <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">{t("orders")}</span>
+            <span className="hidden sm:inline">{t("orders.createNew")}</span>
           </TabsTrigger>
         </TabsList>
 
