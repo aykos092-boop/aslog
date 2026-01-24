@@ -35,6 +35,50 @@ ${carriersContext}
 Отвечай кратко, дружелюбно и по делу. Используй эмодзи умеренно.
 Когда пользователь спрашивает о рекомендациях перевозчиков, используй реальные данные о перевозчиках выше.`;
 
+// Input validation for messages
+interface ChatMessage {
+  role: string;
+  content: string;
+}
+
+function validateMessages(messages: unknown): { valid: boolean; error?: string; messages?: ChatMessage[] } {
+  if (!Array.isArray(messages)) {
+    return { valid: false, error: "Messages must be an array" };
+  }
+
+  if (messages.length === 0 || messages.length > 50) {
+    return { valid: false, error: "Messages count must be 1-50" };
+  }
+
+  const validRoles = ["user", "assistant", "system"];
+  
+  for (let i = 0; i < messages.length; i++) {
+    const msg = messages[i];
+    
+    if (!msg || typeof msg !== "object") {
+      return { valid: false, error: `Invalid message at index ${i}` };
+    }
+
+    if (!msg.role || typeof msg.role !== "string") {
+      return { valid: false, error: `Missing or invalid role at index ${i}` };
+    }
+
+    if (!validRoles.includes(msg.role)) {
+      return { valid: false, error: `Invalid role "${msg.role}" at index ${i}. Must be user, assistant, or system` };
+    }
+
+    if (!msg.content || typeof msg.content !== "string") {
+      return { valid: false, error: `Missing or invalid content at index ${i}` };
+    }
+
+    if (msg.content.length > 10000) {
+      return { valid: false, error: `Message at index ${i} exceeds maximum length of 10000 characters` };
+    }
+  }
+
+  return { valid: true, messages: messages as ChatMessage[] };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -78,8 +122,27 @@ serve(async (req) => {
 
     console.log("Authenticated user:", user.id);
 
-    const { messages } = await req.json();
-    console.log("Processing AI request with", messages.length, "messages");
+    // Parse and validate request body
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON in request body" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const validation = validateMessages(body.messages);
+    if (!validation.valid) {
+      return new Response(
+        JSON.stringify({ error: validation.error }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const messages = validation.messages!;
+    console.log("Processing AI request with", messages.length, "validated messages");
 
     // Fetch top carriers with ratings for context
     let carriersContext = "";
