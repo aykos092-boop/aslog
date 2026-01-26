@@ -573,6 +573,20 @@ const UnifiedNavigator = () => {
     }
   }, []);
 
+  // Stop navigation
+  const stopNavigation = useCallback(() => {
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    if (locationMarkerRef.current && mapRef.current) {
+      mapRef.current.removeLayer(locationMarkerRef.current);
+      locationMarkerRef.current = null;
+    }
+    setIsNavigating(false);
+    stopVoice();
+  }, [stopVoice]);
+
   // Start navigation
   const startNavigation = useCallback(() => {
     if (!routes.length || !navigator.geolocation) {
@@ -686,20 +700,6 @@ const UnifiedNavigator = () => {
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 1000 }
     );
   }, [routes, selectedRouteIndex, dealId, followMeMode, speak, speakInstruction, t, toast, calculateBearing, calculateDistance, checkSpeedCamera, resetCameraAlerts, lastPosition, voiceSettings.enabled, stopNavigation]);
-
-  // Stop navigation
-  const stopNavigation = useCallback(() => {
-    if (watchIdRef.current !== null) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
-      watchIdRef.current = null;
-    }
-    if (locationMarkerRef.current && mapRef.current) {
-      mapRef.current.removeLayer(locationMarkerRef.current);
-      locationMarkerRef.current = null;
-    }
-    setIsNavigating(false);
-    stopVoice();
-  }, [stopVoice]);
 
   // Handle voice settings change
   const handleVoiceSettingsChange = useCallback((newSettings: VoiceSettings) => {
