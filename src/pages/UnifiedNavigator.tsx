@@ -23,6 +23,7 @@ import { useSpeedCameraAlerts } from "@/hooks/useSpeedCameraAlerts";
 import { SpeedCameraOverlay } from "@/components/navigation/SpeedCameraOverlay";
 import { OfflineCacheStatus } from "@/components/navigation/OfflineCacheStatus";
 import { RouteAlternativesPanel } from "@/components/navigation/RouteAlternativesPanel";
+import { NavigationInstruction } from "@/components/navigation/NavigationInstruction";
 
 // Types
 type TravelMode = "driving" | "walking";
@@ -97,7 +98,7 @@ const UnifiedNavigator = () => {
   const [loading, setLoading] = useState(true);
   const [routeLoading, setRouteLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mapStyle, setMapStyle] = useState<MapStyle>("light");
+  const [mapStyle, setMapStyle] = useState<MapStyle>("traffic");
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [stepsExpanded, setStepsExpanded] = useState(false);
   
@@ -213,7 +214,10 @@ const UnifiedNavigator = () => {
         
         L.tileLayer(tileConfig.url, {
           maxZoom: 19,
+          tileSize: 512,
+          zoomOffset: -1,
           subdomains: tileConfig.subdomains || undefined,
+          attribution: tileConfig.attribution || '',
         }).addTo(map);
 
         L.control.zoom({ position: "bottomright" }).addTo(map);
@@ -633,6 +637,47 @@ const UnifiedNavigator = () => {
             }
           });
         }
+
+        // Check current step and announce
+        if (routes.length > 0 && routes[selectedRouteIndex]) {
+          const route = routes[selectedRouteIndex];
+          
+          for (let i = 0; i < route.steps.length; i++) {
+            const step = route.steps[i];
+            const distToStep = calculateDistance(
+              coords.lat,
+              coords.lng,
+              step.startLocation.lat,
+              step.startLocation.lng
+            );
+            
+            // Announce step when within 100m and not already announced
+            if (distToStep < 0.1 && i !== lastAnnouncedStepRef.current) {
+              lastAnnouncedStepRef.current = i;
+              setCurrentStepIndex(i);
+              
+              if (voiceSettings.enabled) {
+                const distanceText = step.distance.text;
+                speakInstruction(step.instruction, distanceText);
+              }
+              break;
+            }
+          }
+          
+          // Check proximity to destination
+          const lastStep = route.steps[route.steps.length - 1];
+          const distToDest = calculateDistance(
+            coords.lat,
+            coords.lng,
+            lastStep.endLocation.lat,
+            lastStep.endLocation.lng
+          );
+          
+          if (distToDest < 0.05 && voiceSettings.enabled) {
+            speak("Вы прибыли к месту назначения");
+            stopNavigation();
+          }
+        }
       },
       (err) => {
         console.error("GPS error:", err);
@@ -640,7 +685,7 @@ const UnifiedNavigator = () => {
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 1000 }
     );
-  }, [routes, dealId, followMeMode, speak, t, toast, calculateBearing, checkSpeedCamera, resetCameraAlerts, lastPosition]);
+  }, [routes, selectedRouteIndex, dealId, followMeMode, speak, speakInstruction, t, toast, calculateBearing, calculateDistance, checkSpeedCamera, resetCameraAlerts, lastPosition, voiceSettings.enabled, stopNavigation]);
 
   // Stop navigation
   const stopNavigation = useCallback(() => {
@@ -770,6 +815,18 @@ const UnifiedNavigator = () => {
         {/* Speed Camera Overlay */}
         {nearbyCamera && (
           <SpeedCameraOverlay camera={nearbyCamera} currentSpeed={currentSpeed} />
+        )}
+
+        {/* Current Navigation Instruction */}
+        {isNavigating && selectedRoute && selectedRoute.steps[currentStepIndex] && (
+          <div className="absolute top-3 left-3 right-3 z-10">
+            <NavigationInstruction
+              instruction={selectedRoute.steps[currentStepIndex].instruction}
+              distance={selectedRoute.steps[currentStepIndex].distance.text}
+              maneuver={selectedRoute.steps[currentStepIndex].maneuver}
+              currentSpeed={currentSpeed}
+            />
+          </div>
         )}
 
         {/* Map Controls - Mobile bottom-right */}

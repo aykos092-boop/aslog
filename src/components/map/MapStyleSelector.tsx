@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import { Map, Sun, Moon, Satellite } from "lucide-react";
+import { Map, Sun, Moon, Satellite, Navigation as NavigationIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -7,8 +7,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { MAPBOX_CONFIG, getMapboxTileUrl, getMapboxAttribution } from "@/config/mapbox";
 
-export type MapStyle = "light" | "dark" | "satellite";
+export type MapStyle = "light" | "dark" | "satellite" | "streets" | "outdoors" | "traffic";
 
 interface MapStyleSelectorProps {
   value: MapStyle;
@@ -16,17 +17,30 @@ interface MapStyleSelectorProps {
   className?: string;
 }
 
-export const mapTileUrls: Record<MapStyle, { url: string; subdomains?: string }> = {
+export const mapTileUrls: Record<MapStyle, { url: string; subdomains?: string; attribution?: string }> = {
   light: {
-    url: "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
-    subdomains: "abcd",
+    url: getMapboxTileUrl("light"),
+    attribution: getMapboxAttribution(),
   },
   dark: {
-    url: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-    subdomains: "abcd",
+    url: getMapboxTileUrl("dark"),
+    attribution: getMapboxAttribution(),
+  },
+  streets: {
+    url: getMapboxTileUrl("streets"),
+    attribution: getMapboxAttribution(),
+  },
+  outdoors: {
+    url: getMapboxTileUrl("outdoors"),
+    attribution: getMapboxAttribution(),
   },
   satellite: {
-    url: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+    url: getMapboxTileUrl("satellite"),
+    attribution: getMapboxAttribution(),
+  },
+  traffic: {
+    url: getMapboxTileUrl("traffic"),
+    attribution: getMapboxAttribution(),
   },
 };
 
@@ -35,7 +49,10 @@ export const MapStyleSelector = forwardRef<HTMLDivElement, MapStyleSelectorProps
     const styles = [
       { id: "light" as const, icon: Sun, label: "Светлая" },
       { id: "dark" as const, icon: Moon, label: "Тёмная" },
+      { id: "streets" as const, icon: Map, label: "Улицы" },
+      { id: "outdoors" as const, icon: Map, label: "Природа" },
       { id: "satellite" as const, icon: Satellite, label: "Спутник" },
+      { id: "traffic" as const, icon: NavigationIcon, label: "Навигация" },
     ];
 
     const currentStyle = styles.find(s => s.id === value) || styles[0];

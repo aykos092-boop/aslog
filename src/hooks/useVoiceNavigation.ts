@@ -306,18 +306,37 @@ export const useVoiceNavigation = (options: VoiceNavigationOptions = {}) => {
     if (distance) {
       text = `Через ${distance}, ${instruction}`;
     }
+    
+    // Add emphasis based on maneuver type
+    const lowerText = text.toLowerCase();
+    if (lowerText.includes('поверните налево') || lowerText.includes('turn left')) {
+      text = `Внимание! ${text}`;
+    } else if (lowerText.includes('поверните направо') || lowerText.includes('turn right')) {
+      text = `Внимание! ${text}`;
+    } else if (lowerText.includes('круговом') || lowerText.includes('roundabout')) {
+      text = `Приготовьтесь! ${text}`;
+    }
+    
     speak(text);
   }, [speak]);
 
   const speakProximityAlert = useCallback((distanceKm: number) => {
-    if (distanceKm <= 0.1) {
-      speak("Вы прибыли к месту назначения.");
+    if (distanceKm <= 0.05) {
+      speak("Вы прибыли к месту назначения. Приятного дня!");
+    } else if (distanceKm <= 0.1) {
+      speak("Пункт назначения находится совсем рядом. Менее 100 метров.");
+    } else if (distanceKm <= 0.3) {
+      speak("Вы почти у цели. До точки доставки менее 300 метров.");
     } else if (distanceKm <= 0.5) {
-      speak("Вы почти у цели. До точки доставки менее 500 метров.");
+      speak("До точки доставки около 500 метров.");
     } else if (distanceKm <= 1) {
       speak("До точки доставки остался 1 километр.");
+    } else if (distanceKm <= 3) {
+      speak(`До точки доставки осталось ${Math.round(distanceKm)} километра.`);
     } else if (distanceKm <= 5) {
       speak(`До точки доставки осталось ${Math.round(distanceKm)} километров.`);
+    } else if (distanceKm <= 10) {
+      speak(`Продолжайте движение. До пункта назначения ${Math.round(distanceKm)} километров.`);
     }
   }, [speak]);
 
