@@ -534,6 +534,7 @@ const translations: Record<Language, Record<string, string>> = {
     "ordersList.orderCancelled": "Заявка отменена",
     "ordersList.orderCancelledDesc": "Ваша заявка была успешно отменена",
     "ordersList.cancelFailed": "Не удалось отменить заявку",
+    "ordersList.viewRoute": "Маршрут",
     
     // AI Chat
     "aiChat.title": "AI Помощник",
@@ -1103,6 +1104,7 @@ const translations: Record<Language, Record<string, string>> = {
     "ordersList.orderCancelled": "Buyurtma bekor qilindi",
     "ordersList.orderCancelledDesc": "Buyurtmangiz muvaffaqiyatli bekor qilindi",
     "ordersList.cancelFailed": "Buyurtmani bekor qilib bo'lmadi",
+    "ordersList.viewRoute": "Marshrut",
     
     // AI Chat
     "aiChat.title": "AI Yordamchi",
@@ -1672,6 +1674,7 @@ const translations: Record<Language, Record<string, string>> = {
     "ordersList.orderCancelled": "Order cancelled",
     "ordersList.orderCancelledDesc": "Your order has been successfully cancelled",
     "ordersList.cancelFailed": "Failed to cancel order",
+    "ordersList.viewRoute": "View Route",
     
     // AI Chat
     "aiChat.title": "AI Assistant",

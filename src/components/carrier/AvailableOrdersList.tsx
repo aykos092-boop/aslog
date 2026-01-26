@@ -521,8 +521,8 @@ export const AvailableOrdersList = () => {
                   <Button 
                     variant="outline" 
                     size="sm"
-                    onClick={() => navigate(`/navigator/${order.id}`)}
-                    title="Посмотреть маршрут"
+                    onClick={() => navigate(`/navigator/order/${order.id}`)}
+                    title="Посмотреть маршрут с автозаполнением"
                   >
                     <Navigation className="w-4 h-4 mr-1" />
                     Маршрут

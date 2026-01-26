@@ -258,6 +258,15 @@ export const OrdersList = ({ refreshTrigger }: OrdersListProps) => {
                     <Button 
                       variant="outline" 
                       size="sm"
+                      onClick={() => navigate(`/navigator/order/${order.id}`)}
+                      title="Посмотреть маршрут"
+                    >
+                      <MapPin className="w-4 h-4 mr-1" />
+                      {t("ordersList.viewRoute")}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
                       onClick={() => navigate(`/orders/${order.id}/responses`)}
                     >
                       <Eye className="w-4 h-4 mr-1" />

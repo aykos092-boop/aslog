@@ -47,7 +47,8 @@ const App = () => (
                 {/* Unified Navigator - single navigation component */}
                 <Route path="/navigate/:dealId" element={<UnifiedNavigator />} />
                 <Route path="/navigator" element={<UnifiedNavigator />} />
-                <Route path="/navigator/:orderId" element={<UnifiedNavigator />} />
+                <Route path="/navigator/order/:orderId" element={<UnifiedNavigator />} />
+                <Route path="/navigator/deal/:dealId" element={<UnifiedNavigator />} />
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/subscription" element={<Subscription />} />
                 <Route path="/profile" element={<UserProfile />} />

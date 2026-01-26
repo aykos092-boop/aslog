@@ -383,7 +383,7 @@ const DealChat = () => {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => navigate(`/navigator/${deal.order_id}`)}
+                      onClick={() => navigate(`/navigator/deal/${dealId}`)}
                     >
                       <Maximize2 className="w-4 h-4 mr-1" />
                       {t("navigation.fullNavigation")}
@@ -463,7 +463,7 @@ const DealChat = () => {
                   <Button 
                     size="lg" 
                     className="w-full"
-                    onClick={() => navigate(`/navigator/${deal.order_id}`)}
+                    onClick={() => navigate(`/navigator/deal/${dealId}`)}
                   >
                     <Navigation className="w-4 h-4 mr-2" />
                     {t("navigation.openNavigator")}
