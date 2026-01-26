@@ -8,9 +8,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { validatePassword, requestPasswordReset, resetPassword as resetPasswordService } from "@/services/authService";
 import { 
   Loader2, Mail, Phone, ArrowLeft, CheckCircle, 
-  KeyRound, Eye, EyeOff 
+  KeyRound, Eye, EyeOff, AlertCircle 
 } from "lucide-react";
 
 interface PasswordResetFormProps {
@@ -50,7 +51,7 @@ export const PasswordResetForm = ({ onBack, onSuccess }: PasswordResetFormProps)
     return value;
   };
 
-  const requestReset = async () => {
+  const handleRequestReset = async () => {
     if (method === 'email' && !email) {
       toast({ title: "Ошибка", description: "Введите email", variant: "destructive" });
       return;
@@ -62,20 +63,14 @@ export const PasswordResetForm = ({ onBack, onSuccess }: PasswordResetFormProps)
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('password-reset', {
-        body: {
-          action: 'request',
-          email: method === 'email' ? email : undefined,
-          phone: method === 'phone' ? phone.replace(/\D/g, '') : undefined,
-        },
-      });
+      const result = await requestPasswordReset(
+        method === 'email' ? email : phone
+      );
 
-      if (error) throw error;
-
-      if (data.success) {
-        setResetMethod(data.method || 'email');
+      if (result.success) {
+        setResetMethod((result.method as 'email' | 'telegram') || 'email');
         
-        if (data.method === 'telegram') {
+        if (result.method === 'telegram') {
           setStep('verify');
           toast({
             title: "Код отправлен",
@@ -88,6 +83,8 @@ export const PasswordResetForm = ({ onBack, onSuccess }: PasswordResetFormProps)
           });
           onSuccess();
         }
+      } else {
+        throw new Error(result.error);
       }
     } catch (error: any) {
       toast({
@@ -108,11 +105,18 @@ export const PasswordResetForm = ({ onBack, onSuccess }: PasswordResetFormProps)
     setStep('reset');
   };
 
-  const resetPassword = async () => {
-    if (newPassword.length < 8) {
-      toast({ title: "Ошибка", description: "Пароль должен быть не менее 8 символов", variant: "destructive" });
+  const handleResetPassword = async () => {
+    // Validate password
+    const validation = validatePassword(newPassword);
+    if (!validation.valid) {
+      toast({ 
+        title: "Пароль не соответствует требованиям", 
+        description: validation.errors.join(', '), 
+        variant: "destructive" 
+      });
       return;
     }
+    
     if (newPassword !== confirmPassword) {
       toast({ title: "Ошибка", description: "Пароли не совпадают", variant: "destructive" });
       return;
@@ -120,25 +124,20 @@ export const PasswordResetForm = ({ onBack, onSuccess }: PasswordResetFormProps)
 
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('password-reset', {
-        body: {
-          action: 'reset',
-          otp,
-          phone: phone.replace(/\D/g, ''),
-          newPassword,
-        },
+      const result = await resetPasswordService({
+        otp,
+        phone: phone.replace(/\D/g, ''),
+        newPassword,
       });
 
-      if (error) throw error;
-
-      if (data.success) {
+      if (result.success) {
         toast({
-          title: "Пароль изменён",
+          title: "✅ Пароль изменён",
           description: "Теперь вы можете войти с новым паролем",
         });
         onSuccess();
       } else {
-        throw new Error(data.error);
+        throw new Error(result.error);
       }
     } catch (error: any) {
       toast({
@@ -220,7 +219,7 @@ export const PasswordResetForm = ({ onBack, onSuccess }: PasswordResetFormProps)
             </Tabs>
 
             <Button
-              onClick={requestReset}
+              onClick={handleRequestReset}
               disabled={loading}
               className="w-full"
             >
@@ -269,13 +268,26 @@ export const PasswordResetForm = ({ onBack, onSuccess }: PasswordResetFormProps)
 
         {step === 'reset' && (
           <>
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+              <p className="text-xs text-blue-800 dark:text-blue-200 font-semibold mb-2">
+                🔒 Требования к паролю:
+              </p>
+              <ul className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+                <li>• Минимум 8 символов</li>
+                <li>• Заглавная буква (A-Z)</li>
+                <li>• Строчная буква (a-z)</li>
+                <li>• Цифра (0-9)</li>
+                <li>• Спецсимвол (!@#$%...)</li>
+              </ul>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="new-password">Новый пароль</Label>
               <div className="relative">
                 <Input
                   id="new-password"
                   type={showPassword ? 'text' : 'password'}
-                  placeholder="Минимум 8 символов"
+                  placeholder="Введите новый пароль"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                 />
@@ -303,7 +315,7 @@ export const PasswordResetForm = ({ onBack, onSuccess }: PasswordResetFormProps)
             </div>
 
             <Button
-              onClick={resetPassword}
+              onClick={handleResetPassword}
               disabled={loading || !newPassword || !confirmPassword}
               className="w-full"
             >

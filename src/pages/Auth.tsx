@@ -15,6 +15,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { BRAND } from "@/config/brand";
 import { PhoneOTPVerification } from "@/components/auth/PhoneOTPVerification";
 import { PasswordResetForm } from "@/components/auth/PasswordResetForm";
+import { EmailOTPInput } from "@/components/auth/EmailOTPInput";
+import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import { validatePassword, validateEmail, signUpWithEmailOTP, AppRole } from "@/services/authService";
 type Role = "client" | "carrier";
 type AuthMethod = "email" | "phone";
 const Auth = () => {
@@ -56,7 +59,9 @@ const Auth = () => {
   const [referralCode, setReferralCode] = useState("");
   const [referralValid, setReferralValid] = useState<boolean | null>(null);
   const [phoneVerified, setPhoneVerified] = useState(false);
-  const [signupStep, setSignupStep] = useState<'info' | 'verify'>('info');
+  const [signupStep, setSignupStep] = useState<'info' | 'email-verify' | 'phone-verify'>('info');
+  const [showEmailOTP, setShowEmailOTP] = useState(false);
+  const [pendingUserId, setPendingUserId] = useState<string | null>(null);
   useEffect(() => {
     const refCode = searchParams.get("ref");
     if (refCode) {
@@ -177,25 +182,62 @@ const Auth = () => {
   };
   const handleSignupContinue = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      emailSchema.parse(signupEmail);
-      passwordSchema.parse(signupPassword);
-      nameSchema.parse(signupName);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        toast({
-          title: t("auth.validationError"),
-          description: error.errors[0].message,
-          variant: "destructive"
-        });
-        return;
-      }
-    }
-    if (signupPhone && !phoneVerified) {
-      setSignupStep('verify');
+    
+    // Validate inputs
+    if (!validateEmail(signupEmail)) {
+      toast({
+        title: t("auth.validationError"),
+        description: "Неверный формат email",
+        variant: "destructive"
+      });
       return;
     }
-    await completeSignup();
+
+    const passwordValidation = validatePassword(signupPassword);
+    if (!passwordValidation.valid) {
+      toast({
+        title: "Пароль не соответствует требованиям",
+        description: passwordValidation.errors.join(', '),
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (signupName.length < 2) {
+      toast({
+        title: t("auth.validationError"),
+        description: "Имя должно содержать минимум 2 символа",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Start signup with email OTP verification
+    setSignupLoading(true);
+    const result = await signUpWithEmailOTP({
+      email: signupEmail,
+      password: signupPassword,
+      fullName: signupName,
+      role: signupRole as AppRole,
+      phone: signupPhone,
+      referralCode
+    });
+
+    if (result.success && result.requiresOTP) {
+      setPendingUserId(result.userId || null);
+      setSignupStep('email-verify');
+      toast({
+        title: "Проверьте email",
+        description: `Мы отправили код на ${signupEmail}`
+      });
+    } else if (result.error) {
+      toast({
+        title: "Ошибка регистрации",
+        description: result.error,
+        variant: "destructive"
+      });
+    }
+    setSignupLoading(false);
   };
   const completeSignup = async () => {
     setSignupLoading(true);
@@ -317,12 +359,56 @@ const Auth = () => {
                         {t("auth.loggingIn")}
                       </> : t("auth.login")}
                   </Button>
+
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t" />
+                    </div>
+                    <div className="relative flex justify-center text-xs uppercase">
+                      <span className="bg-background px-2 text-muted-foreground">Или</span>
+                    </div>
+                  </div>
+
+                  <GoogleSignInButton 
+                    role="client"
+                    onSuccess={() => {
+                      toast({
+                        title: "✅ Вход выполнен",
+                        description: "Добро пожаловать!"
+                      });
+                      navigate("/dashboard");
+                    }}
+                  />
                 </form>
               </TabsContent>
 
               {/* Signup Form */}
               <TabsContent value="signup">
-                {signupStep === 'verify' ? <div className="space-y-4">
+                {signupStep === 'email-verify' ? <div className="space-y-4">
+                    <EmailOTPInput
+                      email={signupEmail}
+                      type="email_verification"
+                      onVerified={() => {
+                        toast({
+                          title: "✅ Email подтверждён",
+                          description: "Добро пожаловать!"
+                        });
+                        
+                        // Check if phone needs verification
+                        if (signupPhone && !phoneVerified) {
+                          setSignupStep('phone-verify');
+                        } else {
+                          navigate("/dashboard");
+                        }
+                      }}
+                      onError={(error) => {
+                        console.error('Email OTP error:', error);
+                      }}
+                    />
+                    <Button variant="ghost" className="w-full" onClick={() => setSignupStep('info')}>
+                      Назад
+                    </Button>
+                  </div> : signupStep === 'phone-verify' ? <div className="space-y-4">
                     <div className="text-center mb-4">
                       <h3 className="font-semibold">Подтвердите телефон</h3>
                       <p className="text-sm text-muted-foreground">
@@ -400,6 +486,36 @@ const Auth = () => {
                   }} className={referralValid === true ? "border-green-500" : referralValid === false ? "border-red-500" : ""} />
                       {referralValid === true && <p className="text-xs text-green-600">✓ {t("auth.codeValid")}</p>}
                       {referralValid === false && referralCode && <p className="text-xs text-red-600">✗ {t("auth.codeNotFound")}</p>}
+                    </div>
+
+                    {/* Google Sign-In */}
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">Или</span>
+                      </div>
+                    </div>
+
+                    <GoogleSignInButton 
+                      role={signupRole as AppRole}
+                      onSuccess={() => {
+                        toast({
+                          title: "✅ Вход выполнен",
+                          description: "Добро пожаловать!"
+                        });
+                        navigate("/dashboard");
+                      }}
+                    />
+
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">Или зарегистрируйтесь</span>
+                      </div>
                     </div>
 
                     <Button type="submit" className="w-full" variant={signupRole === "client" ? "customer" : "driver"} size="lg" disabled={signupLoading}>
