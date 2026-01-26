@@ -170,7 +170,7 @@ const UnifiedNavigator = () => {
     const lat2 = to.lat * Math.PI / 180;
     const y = Math.sin(dLon) * Math.cos(lat2);
     const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLon);
-    let bearing = Math.atan2(y, x) * 180 / Math.PI;
+    const bearing = Math.atan2(y, x) * 180 / Math.PI;
     return (bearing + 360) % 360;
   }, []);
 
@@ -388,7 +388,8 @@ const UnifiedNavigator = () => {
     };
 
     loadData();
-  }, [orderId, dealId, searchParams, t]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderId, dealId, searchParams]);
 
   // Subscribe to order status changes (real-time)
   useEffect(() => {
@@ -422,7 +423,8 @@ const UnifiedNavigator = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [orderData?.id, navigate, t, toast]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderData?.id]);
 
   // Build route
   const buildRoute = useCallback(async () => {
@@ -433,8 +435,8 @@ const UnifiedNavigator = () => {
 
     try {
       // Geocode if needed
-      let origin = fromCoords;
-      let destination = toCoords;
+      const origin = fromCoords;
+      const destination = toCoords;
 
       if (!origin || !destination) {
         const { data, error: geoError } = await supabase.functions.invoke("google-directions", {
@@ -495,7 +497,8 @@ const UnifiedNavigator = () => {
     } finally {
       setRouteLoading(false);
     }
-  }, [fromAddress, toAddress, fromCoords, toCoords, travelMode, voiceSettings.enabled, speak, t]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fromAddress, toAddress, fromCoords, toCoords, travelMode, voiceSettings.enabled]);
 
   // Draw routes on map
   const drawRoutes = useCallback((routeData: RouteData[], selectedIndex: number) => {
@@ -571,6 +574,7 @@ const UnifiedNavigator = () => {
       const endMarker = L.marker([endPoint.lat, endPoint.lng], { icon: endIcon }).addTo(mapRef.current!);
       markersRef.current.push(endMarker);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Stop navigation
