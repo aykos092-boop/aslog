@@ -101,6 +101,7 @@ const UnifiedNavigator = () => {
   const [mapStyle, setMapStyle] = useState<MapStyle>("traffic");
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [stepsExpanded, setStepsExpanded] = useState(false);
+  const [usingFallbackTiles, setUsingFallbackTiles] = useState(false);
   
   // Navigation state
   const [isNavigating, setIsNavigating] = useState(false);
@@ -150,6 +151,8 @@ const UnifiedNavigator = () => {
   const locationMarkerRef = useRef<L.Marker | null>(null);
   const lastAnnouncedStepRef = useRef<number>(-1);
   const watchIdRef = useRef<number | null>(null);
+  const tileErrorCountRef = useRef<number>(0);
+  const tileLoadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Check online/offline status
   useEffect(() => {
@@ -240,10 +243,61 @@ const UnifiedNavigator = () => {
           attribution: tileConfig.attribution || '',
         });
 
+        // Reset error count for new tile layer
+        tileErrorCountRef.current = 0;
+        let tilesLoaded = false;
+
         // Listen to tile layer events
-        tileLayer.on('loading', () => console.log("[Map Init] Tiles loading started..."));
-        tileLayer.on('load', () => console.log("[Map Init] Tiles loaded successfully!"));
-        tileLayer.on('tileerror', (err) => console.error("[Map Init] Tile error:", err));
+        tileLayer.on('loading', () => {
+          console.log("[Map Init] Tiles loading started...");
+          
+          // Set timeout to switch to fallback if tiles don't load within 5 seconds
+          if (tileLoadTimeoutRef.current) {
+            clearTimeout(tileLoadTimeoutRef.current);
+          }
+          
+          tileLoadTimeoutRef.current = setTimeout(() => {
+            if (!tilesLoaded && !usingFallbackTiles && tileErrorCountRef.current > 0) {
+              console.warn("[Map Init] ⚠️ Tiles failed to load, switching to OpenStreetMap fallback...");
+              setUsingFallbackTiles(true);
+              
+              // Remove current tile layer
+              map.removeLayer(tileLayer);
+              
+              // Add OSM fallback
+              const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap contributors',
+              });
+              
+              osmLayer.on('load', () => console.log("[Map Init] ✅ OSM fallback tiles loaded!"));
+              osmLayer.addTo(map);
+              
+              toast({
+                title: "Using OpenStreetMap",
+                description: "Switched to fallback map tiles",
+                variant: "default",
+              });
+            }
+          }, 5000);
+        });
+        
+        tileLayer.on('load', () => {
+          console.log("[Map Init] Tiles loaded successfully!");
+          tilesLoaded = true;
+          if (tileLoadTimeoutRef.current) {
+            clearTimeout(tileLoadTimeoutRef.current);
+          }
+        });
+        
+        tileLayer.on('tileerror', (err) => {
+          console.error("[Map Init] Tile error:", err);
+          tileErrorCountRef.current++;
+          
+          if (tileErrorCountRef.current === 1) {
+            console.warn(`[Map Init] ⚠️ Tile errors detected (${tileErrorCountRef.current}). Will fallback to OSM if issues persist...`);
+          }
+        });
         
         tileLayer.addTo(map);
         console.log("[Map Init] Tile layer added to map");
@@ -292,6 +346,9 @@ const UnifiedNavigator = () => {
 
     return () => {
       clearTimeout(initTimer);
+      if (tileLoadTimeoutRef.current) {
+        clearTimeout(tileLoadTimeoutRef.current);
+      }
       if (mapRef.current) {
         console.log("[Map Init] Cleanup: Removing map");
         mapRef.current.remove();
@@ -822,6 +879,12 @@ const UnifiedNavigator = () => {
           </div>
 
           <div className="flex items-center gap-1">
+            {usingFallbackTiles && (
+              <Badge variant="outline" className="text-blue-500 border-blue-500/30 text-xs">
+                <MapPin className="w-3 h-3 mr-1" />
+                OSM
+              </Badge>
+            )}
             {isOffline && (
               <Badge variant="outline" className="text-orange-500 border-orange-500/30">
                 <CloudOff className="w-3 h-3 mr-1" />
