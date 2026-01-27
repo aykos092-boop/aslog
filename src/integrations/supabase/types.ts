@@ -71,6 +71,7 @@ export type Database = {
       ai_conversations: {
         Row: {
           created_at: string
+          firebase_uid: string | null
           id: string
           messages: Json
           updated_at: string
@@ -78,6 +79,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          firebase_uid?: string | null
           id?: string
           messages?: Json
           updated_at?: string
@@ -85,6 +87,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          firebase_uid?: string | null
           id?: string
           messages?: Json
           updated_at?: string
@@ -676,6 +679,7 @@ export type Database = {
         Row: {
           body: string
           created_at: string
+          firebase_uid: string | null
           id: string
           is_read: boolean
           title: string
@@ -686,6 +690,7 @@ export type Database = {
         Insert: {
           body: string
           created_at?: string
+          firebase_uid?: string | null
           id?: string
           is_read?: boolean
           title: string
@@ -696,6 +701,7 @@ export type Database = {
         Update: {
           body?: string
           created_at?: string
+          firebase_uid?: string | null
           id?: string
           is_read?: boolean
           title?: string
@@ -979,6 +985,7 @@ export type Database = {
       }
       profiles: {
         Row: {
+          account_status: string | null
           address: string | null
           avatar_url: string | null
           balance: number | null
@@ -994,6 +1001,7 @@ export type Database = {
           id: string
           is_verified: boolean | null
           last_ip: string | null
+          last_login_at: string | null
           locked_until: string | null
           login_attempts: number | null
           passport_number_hash: string | null
@@ -1007,6 +1015,7 @@ export type Database = {
           vehicle_type: string | null
         }
         Insert: {
+          account_status?: string | null
           address?: string | null
           avatar_url?: string | null
           balance?: number | null
@@ -1022,6 +1031,7 @@ export type Database = {
           id?: string
           is_verified?: boolean | null
           last_ip?: string | null
+          last_login_at?: string | null
           locked_until?: string | null
           login_attempts?: number | null
           passport_number_hash?: string | null
@@ -1035,6 +1045,7 @@ export type Database = {
           vehicle_type?: string | null
         }
         Update: {
+          account_status?: string | null
           address?: string | null
           avatar_url?: string | null
           balance?: number | null
@@ -1050,6 +1061,7 @@ export type Database = {
           id?: string
           is_verified?: boolean | null
           last_ip?: string | null
+          last_login_at?: string | null
           locked_until?: string | null
           login_attempts?: number | null
           passport_number_hash?: string | null
@@ -1470,18 +1482,21 @@ export type Database = {
       user_roles: {
         Row: {
           created_at: string
+          firebase_uid: string | null
           id: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
           created_at?: string
+          firebase_uid?: string | null
           id?: string
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
           created_at?: string
+          firebase_uid?: string | null
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string

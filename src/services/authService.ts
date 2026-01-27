@@ -282,11 +282,11 @@ export const signInWithEmail = async (
 
     if (error) throw error;
 
-    // Update last login
+    // Update last login (field now exists after migration)
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       await supabase.from('profiles').update({
-        last_login_at: new Date().toISOString()
+        last_login_at: new Date().toISOString(),
       }).eq('user_id', user.id);
     }
 
