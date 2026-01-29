@@ -20,6 +20,9 @@ import Subscription from "./pages/Subscription";
 import NotFound from "./pages/NotFound";
 import UnifiedNavigator from "./pages/UnifiedNavigator";
 import ClientTracking from "./pages/ClientTracking";
+import { LogisticsDashboard } from "./pages/LogisticsDashboard";
+import 'mapbox-gl/dist/mapbox-gl.css';
+import './components/map/MapboxGLStyles.css';
 
 const queryClient = new QueryClient();
 
@@ -55,6 +58,7 @@ const App = () => (
                 <Route path="/profile" element={<UserProfile />} />
                 <Route path="/profile/:userId" element={<UserProfile />} />
                 <Route path="/api-docs" element={<ApiDocs />} />
+                <Route path="/logistics" element={<LogisticsDashboard />} />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>

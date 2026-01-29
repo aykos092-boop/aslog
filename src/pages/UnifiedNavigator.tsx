@@ -196,13 +196,13 @@ const UnifiedNavigator = () => {
       mapRef.current = null;
     }
 
-    // Small delay to ensure container is properly sized
-    const initTimer = setTimeout(() => {
+    // Wait for container to be available and properly sized
+    const initMap = () => {
       console.log("[Map Init] Checking container readiness...");
       
       if (!mapContainerRef.current) {
         console.error("[Map Init] ERROR: Map container ref is null");
-        return;
+        return false;
       }
 
       // Check if container has dimensions
@@ -211,143 +211,193 @@ const UnifiedNavigator = () => {
       
       if (rect.width === 0 || rect.height === 0) {
         console.error("[Map Init] ERROR: Container has zero dimensions");
-        // Try again after a longer delay
-        setTimeout(() => {
-          if (mapContainerRef.current) {
-            const retry = mapContainerRef.current.getBoundingClientRect();
-            console.log("[Map Init] Retry container dimensions:", { width: retry.width, height: retry.height });
+        return false;
+      }
+
+      return true;
+    };
+
+    // Set up ResizeObserver to watch for container size changes
+    let resizeObserver: ResizeObserver | null = null;
+    
+    if (typeof ResizeObserver !== 'undefined' && mapContainerRef.current) {
+      resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const { width, height } = entry.contentRect;
+          console.log("[Map Init] Container resized:", { width, height });
+          
+          if (mapRef.current && width > 0 && height > 0) {
+            // Invalidate map size when container resizes
+            setTimeout(() => {
+              mapRef.current?.invalidateSize();
+            }, 100);
           }
-        }, 500);
+        }
+      });
+      
+      resizeObserver.observe(mapContainerRef.current);
+    }
+
+    // Try multiple times with increasing delays
+    const attempts = [
+      { delay: 100, name: "initial" },
+      { delay: 500, name: "retry1" },
+      { delay: 1000, name: "retry2" },
+      { delay: 2000, name: "final" }
+    ];
+
+    let attemptIndex = 0;
+    
+    const tryInit = () => {
+      if (attemptIndex >= attempts.length) {
+        console.error("[Map Init] Failed to initialize map after all attempts");
         return;
       }
 
-      console.log("[Map Init] Initializing Leaflet map with style:", mapStyle);
+      const attempt = attempts[attemptIndex];
+      console.log(`[Map Init] Attempt ${attemptIndex + 1} (${attempt.name})`);
+      
+      if (initMap()) {
+        console.log("[Map Init] Initializing Leaflet map with style:", mapStyle);
 
-      try {
-        const map = L.map(mapContainerRef.current, {
-          zoomControl: false,
-          attributionControl: false,
-        }).setView([41.3, 69.3], 6);
+        try {
+          const map = L.map(mapContainerRef.current!, {
+            zoomControl: false,
+            attributionControl: false,
+          }).setView([41.3, 69.3], 6);
 
-        console.log("[Map Init] Leaflet map object created");
-        mapRef.current = map;
+          console.log("[Map Init] Leaflet map object created");
+          mapRef.current = map;
 
-        const tileConfig = mapTileUrls[mapStyle];
-        console.log("[Map Init] Loading tiles from:", tileConfig.url);
-        
-        const tileLayer = L.tileLayer(tileConfig.url, {
-          maxZoom: 19,
-          tileSize: 512,
-          zoomOffset: -1,
-          subdomains: tileConfig.subdomains || undefined,
-          attribution: tileConfig.attribution || '',
-        });
-
-        // Reset error count for new tile layer
-        tileErrorCountRef.current = 0;
-        let tilesLoaded = false;
-
-        // Listen to tile layer events
-        tileLayer.on('loading', () => {
-          console.log("[Map Init] Tiles loading started...");
+          const tileConfig = mapTileUrls[mapStyle];
+          console.log("[Map Init] Loading tiles from:", tileConfig.url);
           
-          // Set timeout to switch to fallback if tiles don't load within 5 seconds
-          if (tileLoadTimeoutRef.current) {
-            clearTimeout(tileLoadTimeoutRef.current);
-          }
-          
-          tileLoadTimeoutRef.current = setTimeout(() => {
-            if (!tilesLoaded && !usingFallbackTiles && tileErrorCountRef.current > 0) {
-              console.warn("[Map Init] ⚠️ Tiles failed to load, switching to OpenStreetMap fallback...");
-              setUsingFallbackTiles(true);
-              
-              // Remove current tile layer
-              map.removeLayer(tileLayer);
-              
-              // Add OSM fallback
-              const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '© OpenStreetMap contributors',
-              });
-              
-              osmLayer.on('load', () => console.log("[Map Init] ✅ OSM fallback tiles loaded!"));
-              osmLayer.addTo(map);
-              
-              toast({
-                title: "Using OpenStreetMap",
-                description: "Switched to fallback map tiles",
-                variant: "default",
-              });
+          const tileLayer = L.tileLayer(tileConfig.url, {
+            maxZoom: 19,
+            tileSize: 512,
+            zoomOffset: -1,
+            subdomains: tileConfig.subdomains || undefined,
+            attribution: tileConfig.attribution || '',
+          });
+
+          // Reset error count for new tile layer
+          tileErrorCountRef.current = 0;
+          let tilesLoaded = false;
+
+          // Listen to tile layer events
+          tileLayer.on('loading', () => {
+            console.log("[Map Init] Tiles loading started...");
+            
+            // Set timeout to switch to fallback if tiles don't load within 5 seconds
+            if (tileLoadTimeoutRef.current) {
+              clearTimeout(tileLoadTimeoutRef.current);
             }
-          }, 5000);
-        });
-        
-        tileLayer.on('load', () => {
-          console.log("[Map Init] Tiles loaded successfully!");
-          tilesLoaded = true;
-          if (tileLoadTimeoutRef.current) {
-            clearTimeout(tileLoadTimeoutRef.current);
-          }
-        });
-        
-        tileLayer.on('tileerror', (err) => {
-          console.error("[Map Init] Tile error:", err);
-          tileErrorCountRef.current++;
-          
-          if (tileErrorCountRef.current === 1) {
-            console.warn(`[Map Init] ⚠️ Tile errors detected (${tileErrorCountRef.current}). Will fallback to OSM if issues persist...`);
-          }
-        });
-        
-        tileLayer.addTo(map);
-        console.log("[Map Init] Tile layer added to map");
-
-        L.control.zoom({ position: "bottomright" }).addTo(map);
-
-        // Force multiple invalidateSize calls to ensure tiles render
-        console.log("[Map Init] Scheduling map size invalidations...");
-        [100, 300, 500, 1000].forEach(delay => {
-          setTimeout(() => {
-            if (mapRef.current) {
-              mapRef.current.invalidateSize();
-              console.log(`[Map Init] invalidateSize called at ${delay}ms`);
-            }
-          }, delay);
-        });
-
-        // Get current location
-        if (navigator.geolocation) {
-          console.log("[Map Init] Requesting geolocation...");
-          navigator.geolocation.getCurrentPosition(
-            (pos) => {
-              const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-              console.log("[Map Init] Got location:", coords);
-              setCurrentPosition(coords);
-              if (mapRef.current) {
-                mapRef.current.setView([coords.lat, coords.lng], 14);
-                setTimeout(() => mapRef.current?.invalidateSize(), 50);
+            
+            tileLoadTimeoutRef.current = setTimeout(() => {
+              if (!tilesLoaded && !usingFallbackTiles && tileErrorCountRef.current > 0) {
+                console.warn("[Map Init] ⚠️ Tiles failed to load, switching to OpenStreetMap fallback...");
+                setUsingFallbackTiles(true);
+                
+                // Remove current tile layer
+                map.removeLayer(tileLayer);
+                
+                // Add OSM fallback
+                const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                  maxZoom: 19,
+                  attribution: '© OpenStreetMap contributors',
+                });
+                
+                osmLayer.on('load', () => console.log("[Map Init] ✅ OSM fallback tiles loaded!"));
+                osmLayer.addTo(map);
+                
+                toast({
+                  title: "Using OpenStreetMap",
+                  description: "Switched to fallback map tiles",
+                  variant: "default",
+                });
               }
-            },
-            (err) => {
-              console.log("[Map Init] Geolocation not available:", err.message);
-            },
-            { enableHighAccuracy: true, timeout: 10000 }
-          );
+            }, 5000);
+          });
+          
+          tileLayer.on('load', () => {
+            console.log("[Map Init] Tiles loaded successfully!");
+            tilesLoaded = true;
+            if (tileLoadTimeoutRef.current) {
+              clearTimeout(tileLoadTimeoutRef.current);
+            }
+          });
+          
+          tileLayer.on('tileerror', (err) => {
+            console.error("[Map Init] Tile error:", err);
+            tileErrorCountRef.current++;
+            
+            if (tileErrorCountRef.current === 1) {
+              console.warn(`[Map Init] ⚠️ Tile errors detected (${tileErrorCountRef.current}). Will fallback to OSM if issues persist...`);
+            }
+          });
+          
+          tileLayer.addTo(map);
+          console.log("[Map Init] Tile layer added to map");
+
+          L.control.zoom({ position: "bottomright" }).addTo(map);
+
+          // Force multiple invalidateSize calls to ensure tiles render
+          console.log("[Map Init] Scheduling map size invalidations...");
+          [100, 300, 500, 1000].forEach(delay => {
+            setTimeout(() => {
+              if (mapRef.current) {
+                mapRef.current.invalidateSize();
+                console.log(`[Map Init] invalidateSize called at ${delay}ms`);
+              }
+            }, delay);
+          });
+
+          // Get current location
+          if (navigator.geolocation) {
+            console.log("[Map Init] Requesting geolocation...");
+            navigator.geolocation.getCurrentPosition(
+              (pos) => {
+                const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                console.log("[Map Init] Got location:", coords);
+                setCurrentPosition(coords);
+                if (mapRef.current) {
+                  mapRef.current.setView([coords.lat, coords.lng], 14);
+                  setTimeout(() => mapRef.current?.invalidateSize(), 50);
+                }
+              },
+              (err) => {
+                console.log("[Map Init] Geolocation not available:", err.message);
+              },
+              { enableHighAccuracy: true, timeout: 10000 }
+            );
+          }
+          
+          console.log("[Map Init] ✅ Map initialized successfully");
+        } catch (err) {
+          console.error("[Map Init] ❌ Failed to initialize map:", err);
+          if (err instanceof Error) {
+            console.error("[Map Init] Error details:", err.message, err.stack);
+          }
         }
-        
-        console.log("[Map Init] ✅ Map initialized successfully");
-      } catch (err) {
-        console.error("[Map Init] ❌ Failed to initialize map:", err);
-        if (err instanceof Error) {
-          console.error("[Map Init] Error details:", err.message, err.stack);
+      } else {
+        // Try again with next attempt
+        attemptIndex++;
+        if (attemptIndex < attempts.length) {
+          const nextAttempt = attempts[attemptIndex];
+          setTimeout(tryInit, nextAttempt.delay - attempt.delay);
         }
       }
-    }, 100);
+    };
+
+    const initTimer = setTimeout(tryInit, attempts[0].delay);
 
     return () => {
       clearTimeout(initTimer);
       if (tileLoadTimeoutRef.current) {
         clearTimeout(tileLoadTimeoutRef.current);
+      }
+      if (resizeObserver) {
+        resizeObserver.disconnect();
       }
       if (mapRef.current) {
         console.log("[Map Init] Cleanup: Removing map");
@@ -904,15 +954,16 @@ const UnifiedNavigator = () => {
       </header>
 
       {/* Map - Full screen with explicit sizing */}
-      <div className="flex-1 relative overflow-hidden" style={{ minHeight: '300px' }}>
+      <div className="flex-1 relative overflow-hidden" style={{ minHeight: '400px' }}>
         <div 
           ref={mapContainerRef} 
           className="absolute inset-0 z-0"
           style={{ 
-            minHeight: '300px',
+            minHeight: '400px',
             width: '100%',
             height: '100%',
-            backgroundColor: '#e5e7eb'
+            backgroundColor: '#e5e7eb',
+            position: 'absolute'
           }}
         />
 
