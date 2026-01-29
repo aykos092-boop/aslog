@@ -68,6 +68,26 @@ export const getMapboxTileUrl = (style: MapboxStyle): string => {
 };
 
 /**
+ * Get simple Mapbox tile URL for Leaflet (alternative format)
+ */
+export const getSimpleMapboxTileUrl = (style: MapboxStyle): string => {
+  const token = MAPBOX_CONFIG.accessToken;
+  
+  // Use Mapbox's basic tile URL format
+  const styleMap = {
+    light: 'mapbox/light-v11',
+    dark: 'mapbox/dark-v11',
+    streets: 'mapbox/streets-v12',
+    outdoors: 'mapbox/outdoors-v12',
+    satellite: 'mapbox/satellite-streets-v12',
+    traffic: 'mapbox/navigation-day-v1'
+  };
+  
+  const mapStyle = styleMap[style] || 'mapbox/streets-v12';
+  return `https://api.mapbox.com/styles/v1/${mapStyle}/tiles/{z}/{x}/{y}?access_token=${token}`;
+};
+
+/**
  * Get Mapbox attribution
  */
 export const getMapboxAttribution = (): string => {

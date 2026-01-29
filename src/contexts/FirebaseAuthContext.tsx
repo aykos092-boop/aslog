@@ -221,6 +221,17 @@ export const FirebaseAuthProvider = ({ children }: { children: ReactNode }) => {
         ]).then(([r]) => {
           setRole(r);
         });
+
+        // Check if email is verified
+        if (!firebaseUser.emailVerified) {
+          // User is logged in but email is not verified
+          // Redirect to verification page
+          setEmailVerified(false);
+          setLoading(false);
+          return;
+        } else {
+          setEmailVerified(true);
+        }
       } else {
         setRole(null);
         setEmailVerified(false);

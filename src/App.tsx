@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { FirebaseAuthProvider } from "@/contexts/FirebaseAuthContext";
+import { EmailVerificationWrapper } from "@/components/auth/EmailVerificationWrapper";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -35,33 +36,35 @@ const App = () => (
           <Sonner />
           <FirebaseAuthProvider>
             <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/login" element={<Auth />} />
-                <Route path="/signup" element={<Auth />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/register" element={<Auth />} />
-                <Route path="/admin-login" element={<AdminLogin />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/orders/:orderId/responses" element={<OrderResponses />} />
-                <Route path="/orders/:orderId/chat/:carrierId" element={<OrderChat />} />
-                <Route path="/deals/:dealId/chat" element={<DealChat />} />
-                {/* Client Tracking - real-time driver location for clients */}
-                <Route path="/tracking/:dealId" element={<ClientTracking />} />
-                {/* Unified Navigator - single navigation component */}
-                <Route path="/navigate/:dealId" element={<UnifiedNavigator />} />
-                <Route path="/navigator" element={<UnifiedNavigator />} />
-                <Route path="/navigator/order/:orderId" element={<UnifiedNavigator />} />
-                <Route path="/navigator/deal/:dealId" element={<UnifiedNavigator />} />
-                <Route path="/admin" element={<AdminDashboard />} />
-                <Route path="/subscription" element={<Subscription />} />
-                <Route path="/profile" element={<UserProfile />} />
-                <Route path="/profile/:userId" element={<UserProfile />} />
-                <Route path="/api-docs" element={<ApiDocs />} />
-                <Route path="/logistics" element={<LogisticsDashboard />} />
-                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+              <EmailVerificationWrapper>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/login" element={<Auth />} />
+                  <Route path="/signup" element={<Auth />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/register" element={<Auth />} />
+                  <Route path="/admin-login" element={<AdminLogin />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/orders/:orderId/responses" element={<OrderResponses />} />
+                  <Route path="/orders/:orderId/chat/:carrierId" element={<OrderChat />} />
+                  <Route path="/deals/:dealId/chat" element={<DealChat />} />
+                  {/* Client Tracking - real-time driver location for clients */}
+                  <Route path="/tracking/:dealId" element={<ClientTracking />} />
+                  {/* Unified Navigator - single navigation component */}
+                  <Route path="/navigate/:dealId" element={<UnifiedNavigator />} />
+                  <Route path="/navigator" element={<UnifiedNavigator />} />
+                  <Route path="/navigator/order/:orderId" element={<UnifiedNavigator />} />
+                  <Route path="/navigator/deal/:dealId" element={<UnifiedNavigator />} />
+                  <Route path="/admin" element={<AdminDashboard />} />
+                  <Route path="/subscription" element={<Subscription />} />
+                  <Route path="/profile" element={<UserProfile />} />
+                  <Route path="/profile/:userId" element={<UserProfile />} />
+                  <Route path="/api-docs" element={<ApiDocs />} />
+                  <Route path="/logistics" element={<LogisticsDashboard />} />
+                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </EmailVerificationWrapper>
             </BrowserRouter>
           </FirebaseAuthProvider>
         </TooltipProvider>

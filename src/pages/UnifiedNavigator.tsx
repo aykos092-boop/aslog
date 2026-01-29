@@ -98,7 +98,7 @@ const UnifiedNavigator = () => {
   const [loading, setLoading] = useState(true);
   const [routeLoading, setRouteLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mapStyle, setMapStyle] = useState<MapStyle>("traffic");
+  const [mapStyle, setMapStyle] = useState<MapStyle>("streets");
   const [panelCollapsed, setPanelCollapsed] = useState(false);
   const [stepsExpanded, setStepsExpanded] = useState(false);
   const [usingFallbackTiles, setUsingFallbackTiles] = useState(false);
@@ -272,13 +272,32 @@ const UnifiedNavigator = () => {
           const tileConfig = mapTileUrls[mapStyle];
           console.log("[Map Init] Loading tiles from:", tileConfig.url);
           
-          const tileLayer = L.tileLayer(tileConfig.url, {
-            maxZoom: 19,
-            tileSize: 512,
-            zoomOffset: -1,
-            subdomains: tileConfig.subdomains || undefined,
-            attribution: tileConfig.attribution || '',
-          });
+          let tileLayer: L.TileLayer;
+          
+          try {
+            tileLayer = L.tileLayer(tileConfig.url, {
+              maxZoom: 19,
+              tileSize: 512,
+              zoomOffset: -1,
+              subdomains: tileConfig.subdomains || 'abc',
+              attribution: tileConfig.attribution || '',
+              errorTileUrl: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+              crossOrigin: true,
+            });
+          } catch (tileError) {
+            console.error("[Map Init] Error creating tile layer:", tileError);
+            // Fallback to OpenStreetMap
+            tileLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              maxZoom: 19,
+              attribution: '© OpenStreetMap contributors',
+            });
+            setUsingFallbackTiles(true);
+            toast({
+              title: "Using OpenStreetMap",
+              description: "Switched to fallback map tiles due to error",
+              variant: "default",
+            });
+          }
 
           // Reset error count for new tile layer
           tileErrorCountRef.current = 0;
@@ -333,6 +352,38 @@ const UnifiedNavigator = () => {
             
             if (tileErrorCountRef.current === 1) {
               console.warn(`[Map Init] ⚠️ Tile errors detected (${tileErrorCountRef.current}). Will fallback to OSM if issues persist...`);
+            }
+            
+            // If too many errors, switch to OSM
+            if (tileErrorCountRef.current > 5 && !usingFallbackTiles) {
+              console.warn("[Map Init] Too many tile errors, switching to OpenStreetMap fallback...");
+              setUsingFallbackTiles(true);
+              
+              // Remove current tile layer
+              try {
+                map.removeLayer(tileLayer);
+              } catch (removeErr) {
+                console.error("[Map Init] Error removing tile layer:", removeErr);
+              }
+              
+              // Add OSM fallback
+              try {
+                const osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                  maxZoom: 19,
+                  attribution: '© OpenStreetMap contributors',
+                });
+                
+                osmLayer.on('load', () => console.log("[Map Init] ✅ OSM fallback tiles loaded!"));
+                osmLayer.addTo(map);
+                
+                toast({
+                  title: "Using OpenStreetMap",
+                  description: "Switched to fallback map tiles due to errors",
+                  variant: "default",
+                });
+              } catch (osmErr) {
+                console.error("[Map Init] Error adding OSM fallback:", osmErr);
+              }
             }
           });
           

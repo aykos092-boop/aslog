@@ -7,7 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MAPBOX_CONFIG, getMapboxTileUrl, getMapboxAttribution } from "@/config/mapbox";
+import { MAPBOX_CONFIG, getSimpleMapboxTileUrl, getMapboxAttribution } from "@/config/mapbox";
 
 export type MapStyle = "light" | "dark" | "satellite" | "streets" | "outdoors" | "traffic";
 
@@ -19,27 +19,33 @@ interface MapStyleSelectorProps {
 
 export const mapTileUrls: Record<MapStyle, { url: string; subdomains?: string; attribution?: string }> = {
   light: {
-    url: getMapboxTileUrl("light"),
+    url: getSimpleMapboxTileUrl("light"),
+    subdomains: 'abc',
     attribution: getMapboxAttribution(),
   },
   dark: {
-    url: getMapboxTileUrl("dark"),
+    url: getSimpleMapboxTileUrl("dark"),
+    subdomains: 'abc',
     attribution: getMapboxAttribution(),
   },
   streets: {
-    url: getMapboxTileUrl("streets"),
+    url: getSimpleMapboxTileUrl("streets"),
+    subdomains: 'abc',
     attribution: getMapboxAttribution(),
   },
   outdoors: {
-    url: getMapboxTileUrl("outdoors"),
+    url: getSimpleMapboxTileUrl("outdoors"),
+    subdomains: 'abc',
     attribution: getMapboxAttribution(),
   },
   satellite: {
-    url: getMapboxTileUrl("satellite"),
+    url: getSimpleMapboxTileUrl("satellite"),
+    subdomains: 'abc',
     attribution: getMapboxAttribution(),
   },
   traffic: {
-    url: getMapboxTileUrl("traffic"),
+    url: getSimpleMapboxTileUrl("traffic"),
+    subdomains: 'abc',
     attribution: getMapboxAttribution(),
   },
 };

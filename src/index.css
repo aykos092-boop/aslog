@@ -480,6 +480,69 @@
     }
   }
 
+  /* Email verification animations */
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  .timer-warning {
+    animation: timerWarning 1s ease-in-out infinite;
+  }
+
+  @keyframes timerWarning {
+    0%, 100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+    50% {
+      opacity: 0.7;
+      transform: scale(1.05);
+    }
+  }
+
+  .success-checkmark {
+    animation: successCheckmark 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  }
+
+  @keyframes successCheckmark {
+    0% {
+      transform: scale(0) rotate(45deg);
+      opacity: 0;
+    }
+    50% {
+      transform: scale(1.2) rotate(45deg);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1) rotate(0deg);
+      opacity: 1;
+    }
+  }
+
+  .pulse-success {
+    animation: pulseSuccess 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+
+  @keyframes pulseSuccess {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
   /* Print styles */
   @media print {
     .no-print {

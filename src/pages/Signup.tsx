@@ -49,11 +49,7 @@ const Signup = () => {
     }
   }, [searchParams]);
 
-  useEffect(() => {
-    if (user && !authLoading && !showEmailVerification) {
-      navigate("/dashboard");
-    }
-  }, [user, authLoading, navigate, showEmailVerification]);
+  // Remove automatic redirect to dashboard since EmailVerificationWrapper will handle it
 
   const validateReferralCode = async (code: string) => {
     if (!code.trim()) {
