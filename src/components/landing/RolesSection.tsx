@@ -87,7 +87,7 @@ export const RolesSection = () => {
               </ul>
 
               {/* CTA Button */}
-              <Link to="/auth">
+              <Link to="/signup">
                 <Button variant={role.variant} className="w-full group/btn">
                   {t("landing.roles.startAs")} {t(role.titleKey)}
                   <ArrowRight className="w-4 h-4 transition-transform group-hover/btn:translate-x-1" />

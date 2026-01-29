@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useToast } from "@/hooks/use-toast";
 
 function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
@@ -15,7 +15,7 @@ function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
 }
 
 export function usePushNotifications() {
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   const { toast } = useToast();
   const [isSupported, setIsSupported] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
@@ -86,7 +86,7 @@ export function usePushNotifications() {
       // Save subscription to database
       const { error } = await supabase.from("push_subscriptions").upsert(
         {
-          user_id: user.id,
+          user_id: user.uid,
           endpoint: subJson.endpoint!,
           p256dh: subJson.keys?.p256dh!,
           auth: subJson.keys?.auth!,
@@ -132,7 +132,7 @@ export function usePushNotifications() {
         await supabase
           .from("push_subscriptions")
           .delete()
-          .eq("user_id", user.id)
+          .eq("user_id", user.uid)
           .eq("endpoint", subscription.endpoint);
       }
 

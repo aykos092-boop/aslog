@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Heart, Star, Loader2, User, Truck, Building2, Phone, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -29,7 +29,7 @@ interface FavoriteCarrier {
 export const FavoriteCarriersList = () => {
   const {
     user
-  } = useAuth();
+  } = useFirebaseAuth();
   const {
     toast
   } = useToast();
@@ -48,7 +48,7 @@ export const FavoriteCarriersList = () => {
     const {
       data: favData,
       error
-    } = await supabase.from("favorite_carriers").select("id, carrier_id, created_at").eq("client_id", user!.id).order("created_at", {
+    } = await supabase.from("favorite_carriers").select("id, carrier_id, created_at").eq("client_id", user!.uid).order("created_at", {
       ascending: false
     });
     if (error || !favData?.length) {

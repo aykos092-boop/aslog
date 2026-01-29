@@ -2,14 +2,14 @@ import { Button } from "@/components/ui/button";
 import { Truck, Menu, X } from "lucide-react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
 import { cn } from "@/lib/utils";
 
 export const Header = () => {
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   const { t } = useLanguage();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -63,12 +63,12 @@ export const Header = () => {
               </Link>
             ) : (
               <>
-                <Link to="/auth">
+                <Link to="/login">
                   <Button variant="ghost" size="sm">
                     {t("auth.login")}
                   </Button>
                 </Link>
-                <Link to="/auth">
+                <Link to="/signup">
                   <Button variant="hero" size="sm">
                     {t("landing.hero.cta")}
                   </Button>
@@ -124,12 +124,12 @@ export const Header = () => {
                 </Link>
               ) : (
                 <>
-                  <Link to="/auth">
+                  <Link to="/login">
                     <Button variant="outline" size="lg" className="w-full">
                       {t("auth.login")}
                     </Button>
                   </Link>
-                  <Link to="/auth">
+                  <Link to="/signup">
                     <Button variant="hero" size="lg" className="w-full">
                       {t("landing.hero.cta")}
                     </Button>

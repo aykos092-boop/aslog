@@ -4,7 +4,7 @@ import { format, differenceInHours } from "date-fns";
 import { ru, enUS } from "date-fns/locale";
 import { Package, MapPin, Calendar, Weight, Ruler, MessageSquare, Eye, Loader2, X, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Badge } from "@/components/ui/badge";
@@ -49,7 +49,7 @@ interface OrdersListProps {
 }
 
 export const OrdersList = ({ refreshTrigger }: OrdersListProps) => {
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t, language } = useLanguage();
@@ -76,7 +76,7 @@ export const OrdersList = ({ refreshTrigger }: OrdersListProps) => {
     const { data, error } = await supabase
       .from("orders")
       .select("*")
-      .eq("client_id", user.id)
+      .eq("client_id", user.uid)
       .order("created_at", { ascending: false });
 
     if (error) {

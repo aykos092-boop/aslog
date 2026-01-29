@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { KPICard } from "@/components/ui/KPICard";
@@ -16,7 +16,7 @@ const Dashboard = () => {
     user,
     role,
     loading
-  } = useAuth();
+  } = useFirebaseAuth();
   const {
     t
   } = useLanguage();
@@ -35,22 +35,22 @@ const Dashboard = () => {
         } = await supabase.from("orders").select("*", {
           count: "exact",
           head: true
-        }).eq("client_id", user.id);
+        }).eq("client_id", user.uid);
         const {
           count: activeDealsCount
         } = await supabase.from("deals").select("*", {
           count: "exact",
           head: true
-        }).eq("client_id", user.id).in("status", ["pending", "accepted", "in_transit"]);
+        }).eq("client_id", user.uid).in("status", ["pending", "accepted", "in_transit"]);
         const {
           count: completedCount
         } = await supabase.from("deals").select("*", {
           count: "exact",
           head: true
-        }).eq("client_id", user.id).eq("status", "delivered");
+        }).eq("client_id", user.uid).eq("status", "delivered");
         const {
           data: ratingsData
-        } = await supabase.from("ratings").select("score").eq("rated_id", user.id);
+        } = await supabase.from("ratings").select("score").eq("rated_id", user.uid);
         const avgRating = ratingsData && ratingsData.length > 0 ? ratingsData.reduce((acc, r) => acc + r.score, 0) / ratingsData.length : null;
         setStats({
           orders: ordersCount || 0,
@@ -70,16 +70,16 @@ const Dashboard = () => {
         } = await supabase.from("deals").select("*", {
           count: "exact",
           head: true
-        }).eq("carrier_id", user.id).in("status", ["pending", "accepted", "in_transit"]);
+        }).eq("carrier_id", user.uid).in("status", ["pending", "accepted", "in_transit"]);
         const {
           count: completedCount
         } = await supabase.from("deals").select("*", {
           count: "exact",
           head: true
-        }).eq("carrier_id", user.id).eq("status", "delivered");
+        }).eq("carrier_id", user.uid).eq("status", "delivered");
         const {
           data: ratingsData
-        } = await supabase.from("ratings").select("score").eq("rated_id", user.id);
+        } = await supabase.from("ratings").select("score").eq("rated_id", user.uid);
         const avgRating = ratingsData && ratingsData.length > 0 ? ratingsData.reduce((acc, r) => acc + r.score, 0) / ratingsData.length : null;
         setStats({
           orders: openOrdersCount || 0,
@@ -93,7 +93,7 @@ const Dashboard = () => {
   }, [user, role]);
   useEffect(() => {
     if (!loading && !user) {
-      navigate("/auth");
+      navigate("/login");
     }
   }, [user, loading, navigate]);
   if (loading || !user) return null;

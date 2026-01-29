@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { ImagePlus, X, Loader2, Image as ImageIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -17,7 +17,7 @@ export const CargoImageUpload = ({
   onImagesChange,
   maxImages = 5,
 }: CargoImageUploadProps) => {
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -64,7 +64,7 @@ export const CargoImageUpload = ({
 
       // Generate unique filename
       const fileExt = file.name.split(".").pop();
-      const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+      const fileName = `${user.uid}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
 
       // Upload to Supabase Storage
       const { error: uploadError } = await supabase.storage

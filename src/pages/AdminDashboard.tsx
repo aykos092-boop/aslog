@@ -4,7 +4,7 @@ import {
   Users, Truck, TrendingUp, ArrowLeft, 
   Shield, Loader2, Tag, Bot, FileCheck, Clock, UserCheck, CreditCard
 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -23,7 +23,7 @@ import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { user, role, loading } = useAuth();
+  const { user, role, loading } = useFirebaseAuth();
   const { t } = useLanguage();
 
   useEffect(() => {

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -62,7 +62,7 @@ export const MobileHeader = () => {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, role, signOut } = useAuth();
+  const { user, role, signOut } = useFirebaseAuth();
   const { t } = useLanguage();
 
   const navItems = role === "admin" ? adminNavItems : role === "carrier" ? carrierNavItems : clientNavItems;

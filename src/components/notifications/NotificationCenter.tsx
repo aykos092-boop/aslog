@@ -4,7 +4,7 @@ import { ru } from "date-fns/locale";
 import { Bell, Check, CheckCheck, Loader2, MessageSquare, Package, Truck, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -32,7 +32,7 @@ const typeIcons: Record<string, React.ElementType> = {
 };
 
 export const NotificationCenter = () => {
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   const navigate = useNavigate();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,15 +43,27 @@ export const NotificationCenter = () => {
   const fetchNotifications = async () => {
     if (!user) return;
 
-    const { data, error } = await supabase
-      .from("notifications")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(50);
+    try {
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("user_id", user.uid)
+        .order("created_at", { ascending: false })
+        .limit(50);
 
-    if (!error && data) {
-      setNotifications(data);
+      if (error) {
+        // It's okay if user doesn't have notifications yet
+        if (error.code === 'PGRST116' || error.status === 400) {
+          setNotifications([]);
+        } else {
+          console.error("Error fetching notifications:", error);
+        }
+      } else if (data) {
+        setNotifications(data);
+      }
+    } catch (error) {
+      console.error("Error in fetchNotifications:", error);
+      setNotifications([]);
     }
     setLoading(false);
   };
@@ -100,7 +112,7 @@ export const NotificationCenter = () => {
     await supabase
       .from("notifications")
       .update({ is_read: true })
-      .eq("user_id", user.id)
+      .eq("user_id", user.uid)
       .eq("is_read", false);
 
     setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));

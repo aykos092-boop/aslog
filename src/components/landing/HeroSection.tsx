@@ -58,15 +58,17 @@ export const HeroSection = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12 animate-fade-up stagger-3">
-            <Link to="/auth">
+            <Link to="/signup">
               <Button variant="hero" size="xl" className="group w-full sm:w-auto">
                 {t("landing.hero.cta")}
                 <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
               </Button>
             </Link>
-            <Button variant="outline" size="xl" className="w-full sm:w-auto">
-              {t("landing.hero.demo")}
-            </Button>
+            <Link to="/login">
+              <Button variant="outline" size="xl" className="w-full sm:w-auto">
+                {t("landing.hero.demo")}
+              </Button>
+            </Link>
           </div>
 
           {/* Feature Pills */}

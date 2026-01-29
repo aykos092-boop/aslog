@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Firebase Auth Test - New Project</title>
+</head>
+<body>
+    <h1>Firebase Authentication Test - New Project</h1>
+    <div id="result"></div>
+    
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    
+    <script>
+        // New Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyC_M__1fq9WITH9UdWx5MJc9YINoNETj7U",
+            authDomain: "asloguz-3f2c4.firebaseapp.com",
+            projectId: "asloguz-3f2c4",
+            storageBucket: "asloguz-3f2c4.firebasestorage.app",
+            messagingSenderId: "552407684556",
+            appId: "1:552407684556:web:feb2b0978750065ea47969",
+            measurementId: "G-FEN6C6YM7L"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+
+        // Test function
+        async function testFirebaseAuth() {
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                resultDiv.innerHTML = '<p>Testing Firebase connection...</p>';
+                
+                // Test 1: Check if auth is initialized
+                if (auth) {
+                    resultDiv.innerHTML += '<p>✅ Firebase Auth initialized successfully</p>';
+                } else {
+                    resultDiv.innerHTML += '<p>❌ Firebase Auth initialization failed</p>';
+                    return;
+                }
+
+                // Test 2: Try to create a test user
+                resultDiv.innerHTML += '<p>Testing user creation...</p>';
+                
+                try {
+                    const userCredential = await auth.createUserWithEmailAndPassword(
+                        'test@example.com', 
+                        'test123456'
+                    );
+                    resultDiv.innerHTML += '<p>✅ User creation successful</p>';
+                    
+                    // Clean up - delete the test user
+                    await userCredential.user.delete();
+                    resultDiv.innerHTML += '<p>✅ Test user cleaned up</p>';
+                    
+                } catch (error) {
+                    resultDiv.innerHTML += `<p>❌ User creation failed: ${error.message}</p>`;
+                    resultDiv.innerHTML += `<p>Error code: ${error.code}</p>`;
+                    
+                    // Specific error handling
+                    if (error.code === 'auth/email-already-in-use') {
+                        resultDiv.innerHTML += '<p>This is expected if test user already exists</p>';
+                    } else if (error.code === 'auth/operation-not-allowed') {
+                        resultDiv.innerHTML += '<p>🔥 EMAIL/PASSWORD AUTHENTICATION IS NOT ENABLED!</p>';
+                        resultDiv.innerHTML += '<p>Go to: https://console.firebase.google.com/project/asloguz-3f2c4/authentication/providers</p>';
+                    } else if (error.code === 'auth/weak-password') {
+                        resultDiv.innerHTML += '<p>Password is too weak (minimum 6 characters)</p>';
+                    } else if (error.code === 'auth/invalid-email') {
+                        resultDiv.innerHTML += '<p>Email format is invalid</p>';
+                    }
+                }
+
+            } catch (error) {
+                resultDiv.innerHTML += `<p>❌ General error: ${error.message}</p>`;
+            }
+        }
+
+        // Run test when page loads
+        window.onload = testFirebaseAuth;
+    </script>
+</body>
+</html>

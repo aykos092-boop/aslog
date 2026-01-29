@@ -6,7 +6,7 @@ import { format } from "date-fns";
 import { ru, enUS } from "date-fns/locale";
 import { CalendarIcon, Package, MapPin, Loader2, Tag, Check, X, Truck, Route } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { cn } from "@/lib/utils";
@@ -115,7 +115,7 @@ interface CreateOrderFormProps {
 
 export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
   const { t, language } = useLanguage();
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   const { toast } = useToast();
   
   const [loading, setLoading] = useState(false);
@@ -237,7 +237,7 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
       .from("promo_usages")
       .select("id")
       .eq("promo_code_id", data.id)
-      .eq("user_id", user?.id)
+      .eq("user_id", user?.uid)
       .single();
 
     if (usageData) {
@@ -275,7 +275,7 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
     setLoading(true);
 
     const { data: orderData, error } = await supabase.from("orders").insert({
-      client_id: user.id,
+      client_id: user.uid,
       cargo_type: data.cargo_type,
       weight: data.weight ? parseFloat(data.weight) : null,
       length: data.length ? parseFloat(data.length) : null,
@@ -319,7 +319,7 @@ export const CreateOrderForm = ({ onSuccess }: CreateOrderFormProps) => {
 
       await supabase.from("promo_usages").insert({
         promo_code_id: appliedPromo.id,
-        user_id: user.id,
+        user_id: user.uid,
         order_id: orderData.id,
         discount_applied: discountApplied,
       });

@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -61,7 +61,7 @@ const adminNavItems: NavItem[] = [
 export const AppSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, role, signOut } = useAuth();
+  const { user, role, signOut } = useFirebaseAuth();
   const { t } = useLanguage();
 
   const navItems = role === "admin" ? adminNavItems : role === "carrier" ? carrierNavItems : clientNavItems;

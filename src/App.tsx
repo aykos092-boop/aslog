@@ -5,10 +5,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { ThemeProvider } from "@/hooks/useTheme";
-import { AuthProvider } from "@/hooks/useAuth";
+import { FirebaseAuthProvider } from "@/contexts/FirebaseAuthContext";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
-import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import OrderResponses from "./pages/OrderResponses";
 import OrderChat from "./pages/OrderChat";
@@ -31,12 +30,14 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
-          <BrowserRouter>
-            <AuthProvider>
+          <FirebaseAuthProvider>
+            <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />
+                <Route path="/login" element={<Auth />} />
+                <Route path="/signup" element={<Auth />} />
                 <Route path="/auth" element={<Auth />} />
-                <Route path="/register" element={<Register />} />
+                <Route path="/register" element={<Auth />} />
                 <Route path="/admin-login" element={<AdminLogin />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/orders/:orderId/responses" element={<OrderResponses />} />
@@ -57,8 +58,8 @@ const App = () => (
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
-            </AuthProvider>
-          </BrowserRouter>
+            </BrowserRouter>
+          </FirebaseAuthProvider>
         </TooltipProvider>
       </LanguageProvider>
     </ThemeProvider>

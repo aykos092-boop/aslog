@@ -45,15 +45,17 @@ export const CTASection = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in" style={{ animationDelay: "0.3s" }}>
-            <Link to="/auth">
+            <Link to="/signup">
               <Button variant="glass" size="xl" className="bg-white text-primary hover:bg-white/90 group">
                 {t("landing.cta.create")}
                 <ArrowRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
               </Button>
             </Link>
-            <Button variant="glass" size="xl">
-              {t("landing.cta.contact")}
-            </Button>
+            <Link to="/login">
+              <Button variant="glass" size="xl">
+                {t("landing.cta.contact")}
+              </Button>
+            </Link>
           </div>
 
           {/* Trust Indicators */}

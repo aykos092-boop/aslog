@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { ClientTrackingPanel } from "@/components/tracking/ClientTrackingPanel";
@@ -9,13 +9,13 @@ import { ArrowLeft } from "lucide-react";
 
 const ClientTracking = () => {
   const { dealId } = useParams<{ dealId: string }>();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading } = useFirebaseAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!authLoading && !user) {
-      navigate("/auth");
+      navigate("/login");
     }
   }, [user, authLoading, navigate]);
 

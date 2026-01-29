@@ -1,13 +1,13 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 
 type Message = { role: "user" | "assistant"; content: string };
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-assistant`;
 
 export const useAIChat = () => {
-  const { user, session } = useAuth();
+  const { user } = useFirebaseAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -20,20 +20,33 @@ export const useAIChat = () => {
     const loadHistory = async () => {
       if (!user || historyLoaded) return;
 
-      const { data } = await supabase
-        .from("ai_conversations")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .single();
+      try {
+        const { data, error } = await supabase
+          .from("ai_conversations")
+          .select("*")
+          .eq("user_id", user.uid)
+          .order("updated_at", { ascending: false })
+          .limit(1)
+          .single();
 
-      if (data) {
-        setConversationId(data.id);
-        const savedMessages = data.messages as Message[];
-        if (Array.isArray(savedMessages) && savedMessages.length > 0) {
-          setMessages(savedMessages);
+        if (error) {
+          // It's okay if user doesn't have conversations yet
+          if (error.code !== 'PGRST116') {
+            console.error("Error loading conversation history:", error);
+          }
+          setHistoryLoaded(true);
+          return;
         }
+
+        if (data) {
+          setConversationId(data.id);
+          const savedMessages = data.messages as Message[];
+          if (Array.isArray(savedMessages) && savedMessages.length > 0) {
+            setMessages(savedMessages);
+          }
+        }
+      } catch (error) {
+        console.error("Error in loadHistory:", error);
       }
       setHistoryLoaded(true);
     };
@@ -53,7 +66,7 @@ export const useAIChat = () => {
     } else {
       const { data } = await supabase
         .from("ai_conversations")
-        .insert({ user_id: user.id, messages: newMessages as any })
+        .insert({ user_id: user.uid, messages: newMessages as any })
         .select()
         .single();
       
@@ -70,7 +83,7 @@ export const useAIChat = () => {
     const { data } = await supabase
       .from("ai_chat_logs")
       .insert({
-        user_id: user.id,
+        user_id: user.uid,
         question,
         response_time_ms: responseTimeMs,
       })
@@ -94,8 +107,8 @@ export const useAIChat = () => {
 
   const sendMessage = useCallback(async (input: string) => {
     // Require authentication before sending messages
-    if (!session?.access_token) {
-      console.error("No session token available");
+    if (!user) {
+      console.error("No user available");
       setMessages((prev) => [
         ...prev,
         { role: "user", content: input },
@@ -126,12 +139,14 @@ export const useAIChat = () => {
     };
 
     try {
-      // Use the user's session access token for authentication
+      // Get Firebase ID token for authentication
+      const idToken = await user.getIdToken();
+      
       const resp = await fetch(CHAT_URL, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session.access_token}`,
+          Authorization: `Bearer ${idToken}`,
         },
         body: JSON.stringify({ messages: newMessages }),
       });
@@ -217,7 +232,7 @@ export const useAIChat = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [messages, saveMessages, logChat, session]);
+  }, [messages, saveMessages, logChat, user]);
 
   const clearMessages = useCallback(async () => {
     setMessages([]);

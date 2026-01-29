@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";

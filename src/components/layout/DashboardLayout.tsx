@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { AppSidebar } from "./AppSidebar";
 import { TopBar } from "./TopBar";
 import { MobileHeader } from "./MobileHeader";
@@ -25,7 +25,7 @@ export const DashboardLayout = ({
   actions,
   fullWidth = false,
 }: DashboardLayoutProps) => {
-  const { loading } = useAuth();
+  const { loading } = useFirebaseAuth();
   const isMobile = useIsMobile();
 
   if (loading) {
