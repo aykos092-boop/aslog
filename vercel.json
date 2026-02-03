@@ -1,7 +1,5 @@
 {
   "version": 2,
-  "name": "asloguz-logistics",
-  "domains": ["asloguz.com", "www.asloguz.com"],
   "build": {
     "env": {
       "VITE_SITE_URL": "https://asloguz.com"
