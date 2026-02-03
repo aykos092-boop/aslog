@@ -1,0 +1,21 @@
+# Supabase functions (deployed separately)
+supabase/functions/
+
+# Supabase local data
+supabase/.branches/
+supabase/.temp/
+
+# Development files
+.DS_Store
+*.log
+.env.local
+.env.development.local
+
+# Test files
+coverage/
+.nyc_output/
+
+# Cache directories
+.cache/
+temp/
+tmp/
