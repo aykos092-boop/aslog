@@ -30,10 +30,16 @@ export default defineConfig(({ mode }) => ({
         },
         entryFileNames: 'assets/[name].[hash].js',
         chunkFileNames: 'assets/[name].[hash].js',
-        assetFileNames: 'assets/[name].[hash].[ext]'
+        assetFileNames: (assetInfo) => {
+          if (assetInfo.name && assetInfo.name.endsWith('.png')) {
+            return 'assets/[name].[hash][extname]';
+          }
+          return 'assets/[name].[hash][extname]';
+        }
       }
     },
     chunkSizeWarningLimit: 1000,
+    assetsInlineLimit: 4096,
   },
   preview: {
     port: 4173,
