@@ -65,3 +65,6 @@ verify_jwt = false
 
 [functions.create-payment]
 verify_jwt = false
+
+[functions.documents-pdf]
+verify_jwt = true

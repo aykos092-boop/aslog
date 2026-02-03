@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Logo } from "@/components/ui/Logo";
+import { useState } from "react";
 import {
   LayoutDashboard,
   Package,
@@ -23,6 +24,8 @@ import {
   Navigation,
   Plus,
   Wallet,
+  Banknote,
+  Warehouse,
 } from "lucide-react";
 
 interface NavItem {
@@ -37,6 +40,7 @@ const clientNavItems: NavItem[] = [
   { title: "deals.myDeals", icon: FileText, href: "/dashboard#deals" },
   { title: "favorites.title", icon: Heart, href: "/dashboard#favorites" },
   { title: "orders.createNew", icon: Plus, href: "/dashboard#create-order" },
+  { title: "wallet.deposit", icon: Banknote, href: "/wallet-deposit" },
   { title: "subscription.title", icon: Wallet, href: "/subscription" },
 ];
 
@@ -48,6 +52,7 @@ const carrierNavItems: NavItem[] = [
   { title: "carrier.navigation", icon: Navigation, href: "/dashboard#navigation" },
   { title: "carrier.achievements", icon: Star, href: "/dashboard#achievements" },
   { title: "carrier.preferences", icon: Settings, href: "/dashboard#settings" },
+  { title: "wallet.deposit", icon: Banknote, href: "/wallet-deposit" },
   { title: "subscription.title", icon: Wallet, href: "/subscription" },
 ];
 
@@ -56,6 +61,14 @@ const adminNavItems: NavItem[] = [
   { title: "admin.users", icon: Users, href: "/admin#users" },
   { title: "admin.deals", icon: FileText, href: "/admin#deals" },
   { title: "admin.analytics", icon: BarChart3, href: "/admin#analytics" },
+  { title: "wms.title", icon: Warehouse, href: "/wms" },
+  { title: "wallet.deposit", icon: Banknote, href: "/wallet-deposit" },
+];
+
+const wmsNavItems: NavItem[] = [
+  { title: "nav.dashboard", icon: LayoutDashboard, href: "/dashboard" },
+  { title: "wms.title", icon: Warehouse, href: "/wms" },
+  { title: "wallet.deposit", icon: Banknote, href: "/wallet-deposit" },
 ];
 
 export const AppSidebar = () => {
@@ -64,7 +77,10 @@ export const AppSidebar = () => {
   const { user, role, signOut } = useFirebaseAuth();
   const { t } = useLanguage();
 
-  const navItems = role === "admin" ? adminNavItems : role === "carrier" ? carrierNavItems : clientNavItems;
+  const navItems = role === "admin" ? adminNavItems : 
+                   role === "carrier" ? carrierNavItems : 
+                   (role as string === "warehouse_manager" || role as string === "storekeeper") ? wmsNavItems : 
+                   clientNavItems;
 
   const handleSignOut = async () => {
     await signOut();
@@ -72,19 +88,23 @@ export const AppSidebar = () => {
   };
 
   const getRoleColor = () => {
-    switch (role) {
+    switch (role as string) {
       case "client": return "bg-customer/10 text-customer";
       case "carrier": return "bg-driver/10 text-driver";
       case "admin": return "bg-admin/10 text-admin";
+      case "warehouse_manager": return "bg-orange-500/10 text-orange-500";
+      case "storekeeper": return "bg-blue-500/10 text-blue-500";
       default: return "bg-primary/10 text-primary";
     }
   };
 
   const getRoleIcon = () => {
-    switch (role) {
+    switch (role as string) {
       case "client": return <User className="w-3.5 h-3.5" />;
       case "carrier": return <Truck className="w-3.5 h-3.5" />;
       case "admin": return <Shield className="w-3.5 h-3.5" />;
+      case "warehouse_manager": return <Warehouse className="w-3.5 h-3.5" />;
+      case "storekeeper": return <Package className="w-3.5 h-3.5" />;
       default: return <User className="w-3.5 h-3.5" />;
     }
   };
@@ -118,7 +138,9 @@ export const AppSidebar = () => {
             return (
               <button
                 key={item.href}
-                onClick={() => handleNavClick(item.href)}
+                onClick={() => {
+                  handleNavClick(item.href);
+                }}
                 className={cn(
                   "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 text-left",
                   "hover:bg-accent group relative",
@@ -198,6 +220,7 @@ export const AppSidebar = () => {
           </div>
         </div>
       </aside>
+
     </TooltipProvider>
   );
 };

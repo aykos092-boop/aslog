@@ -5,10 +5,11 @@ import { ru, uz } from "date-fns/locale";
 import { enUS } from "date-fns/locale";
 import { 
   ArrowLeft, Package, MapPin, MessageSquare, Loader2, 
-  Truck, CheckCircle, Navigation, Flag, Star, XCircle, Banknote, Maximize2
+  Truck, CheckCircle, Navigation, Flag, Star, XCircle, Banknote, Maximize2,
+  AlertCircle
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/contexts/LanguageContext";
 
@@ -72,7 +73,7 @@ interface Rating {
 const DealChat = () => {
   const { dealId } = useParams<{ dealId: string }>();
   const navigate = useNavigate();
-  const { user, role } = useAuth();
+  const { user, role } = useFirebaseAuth();
   const { toast } = useToast();
   const { t, language } = useLanguage();
 
@@ -119,8 +120,8 @@ const DealChat = () => {
     }
 
     // Verify user is participant
-    const isClientUser = dealData.client_id === user.id;
-    const isCarrierUser = dealData.carrier_id === user.id;
+    const isClientUser = dealData.client_id === user?.uid;
+    const isCarrierUser = dealData.carrier_id === user?.uid;
 
     if (!isClientUser && !isCarrierUser) {
       toast({
@@ -155,8 +156,8 @@ const DealChat = () => {
       .eq("deal_id", dealId);
 
     if (ratings) {
-      const mine = ratings.find(r => r.rater_id === user.id);
-      const theirs = ratings.find(r => r.rated_id === user.id);
+      const mine = ratings.find(r => r.rater_id === user?.uid);
+      const theirs = ratings.find(r => r.rated_id === user?.uid);
       setMyRating(mine || null);
       setOtherRating(theirs || null);
     }
@@ -220,7 +221,7 @@ const DealChat = () => {
     // Add system message
     await supabase.from("messages").insert({
       deal_id: deal.id,
-      sender_id: user.id,
+      sender_id: user?.uid || "",
       content: message,
       is_system: true,
     });
@@ -264,7 +265,7 @@ const DealChat = () => {
     const cancellerRole = isCarrier ? t("dealChat.carrier") : t("dealChat.client");
     await supabase.from("messages").insert({
       deal_id: deal.id,
-      sender_id: user.id,
+      sender_id: user?.uid || "",
       content: `${cancellerRole} ${t("dealChat.dealCancelled").toLowerCase()}. ${t("dealChat.cancelReason")}: ${cancelReason.trim()}`,
       is_system: true,
     });
@@ -295,9 +296,9 @@ const DealChat = () => {
 
   const status = statusConfig[deal.status];
   const StatusIcon = status.icon;
-  const isCarrier = deal.carrier_id === user?.id;
+  const isCarrier = deal.carrier_id === user?.uid;
 
-  const isClient = deal.client_id === user?.id;
+  const isClient = deal.client_id === user?.uid;
   const showGpsTracking = deal.status === "in_transit";
   const showRating = deal.status === "delivered";
   const otherUserId = isCarrier ? deal.client_id : deal.carrier_id;
@@ -355,50 +356,60 @@ const DealChat = () => {
 
             {/* Status Actions for Carrier */}
             {isCarrier && (
-              <div className="flex gap-2">
+              <div className="flex flex-col gap-2 w-full sm:w-auto">
                 {deal.status === "pending" && (
-                  <Button
-                    size="sm"
-                    variant="driver"
-                    onClick={() => updateDealStatus("accepted", t("dealChat.carrierAccepted"))}
-                    disabled={updatingStatus}
-                  >
-                    <CheckCircle className="w-4 h-4 mr-1" />
-                    {t("dealChat.acceptOrder")}
-                  </Button>
+                  <div className="flex items-center gap-2 p-3 bg-driver/10 border border-driver/20 rounded-lg">
+                    <AlertCircle className="w-5 h-5 text-driver" />
+                    <span className="text-sm font-medium text-driver">
+                        Клиент ожидает вашего подтверждения
+                    </span>
+                  </div>
                 )}
-                {deal.status === "accepted" && (
-                  <Button
-                    size="sm"
-                    variant="driver"
-                    onClick={() => updateDealStatus("in_transit", t("dealChat.cargoInTransit"))}
-                    disabled={updatingStatus}
-                  >
-                    <Navigation className="w-4 h-4 mr-1" />
-                    {t("dealChat.startDelivery")}
-                  </Button>
-                )}
-                {deal.status === "in_transit" && (
-                  <>
+                <div className="flex gap-2 flex-wrap">
+                  {deal.status === "pending" && (
                     <Button
                       size="sm"
-                      variant="outline"
-                      onClick={() => navigate(`/navigator/deal/${dealId}`)}
-                    >
-                      <Maximize2 className="w-4 h-4 mr-1" />
-                      {t("navigation.fullNavigation")}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="driver"
-                      onClick={() => updateDealStatus("delivered", t("dealChat.cargoDelivered"))}
+                      className="bg-driver hover:bg-driver/90 text-white font-semibold px-4 py-2"
+                      onClick={() => updateDealStatus("accepted", t("dealChat.carrierAccepted"))}
                       disabled={updatingStatus}
                     >
-                      <Flag className="w-4 h-4 mr-1" />
-                      {t("dealChat.completeDelivery")}
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      ✅ Принять заказ
                     </Button>
-                  </>
-                )}
+                  )}
+                  {deal.status === "accepted" && (
+                    <Button
+                      size="sm"
+                      className="bg-driver hover:bg-driver/90 text-white font-semibold px-4 py-2"
+                      onClick={() => updateDealStatus("in_transit", t("dealChat.cargoInTransit"))}
+                      disabled={updatingStatus}
+                    >
+                      <Navigation className="w-4 h-4 mr-2" />
+                      🚚 Начать доставку
+                    </Button>
+                  )}
+                  {deal.status === "in_transit" && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => navigate(`/navigator/deal/${dealId}`)}
+                      >
+                        <Maximize2 className="w-4 h-4 mr-1" />
+                        🗺️ Навигация
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="bg-driver hover:bg-driver/90 text-white font-semibold px-4 py-2"
+                        onClick={() => updateDealStatus("delivered", t("dealChat.cargoDelivered"))}
+                        disabled={updatingStatus}
+                      >
+                        <Flag className="w-4 h-4 mr-2" />
+                        ✅ Доставлено
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
             )}
 

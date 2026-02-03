@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { Send, Loader2, Bot } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -27,7 +27,7 @@ interface ChatMessagesProps {
 }
 
 export const ChatMessages = ({ contextType, contextId, participantIds }: ChatMessagesProps) => {
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(true);
@@ -132,7 +132,7 @@ export const ChatMessages = ({ contextType, contextId, participantIds }: ChatMes
     setSending(true);
 
     const insertData = {
-      sender_id: user.id,
+      sender_id: user?.uid || "",
       content: newMessage.trim(),
       is_system: false,
       order_id: contextType === "order" ? contextId : null,

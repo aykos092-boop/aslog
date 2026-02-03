@@ -16,7 +16,7 @@ const Subscription = () => {
       subtitle={t("subscription.subtitle") || "Управляйте своим планом подписки"}
       breadcrumbs={breadcrumbs}
     >
-      <div className="max-w-5xl mx-auto animate-fade-up">
+      <div className="max-w-6xl mx-auto animate-fade-up">
         <SubscriptionManager />
       </div>
     </DashboardLayout>

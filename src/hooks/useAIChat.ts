@@ -21,19 +21,18 @@ export const useAIChat = () => {
       if (!user || historyLoaded) return;
 
       try {
+        // Check if ai_conversations table exists by trying a simple query
         const { data, error } = await supabase
           .from("ai_conversations")
           .select("*")
           .eq("user_id", user.uid)
           .order("updated_at", { ascending: false })
           .limit(1)
-          .single();
+          .maybeSingle();
 
         if (error) {
-          // It's okay if user doesn't have conversations yet
-          if (error.code !== 'PGRST116') {
-            console.error("Error loading conversation history:", error);
-          }
+          // If table doesn't exist or other error, just mark as loaded
+          console.log("AI conversations not available:", error.message);
           setHistoryLoaded(true);
           return;
         }
@@ -46,7 +45,7 @@ export const useAIChat = () => {
           }
         }
       } catch (error) {
-        console.error("Error in loadHistory:", error);
+        console.log("AI chat not available:", error);
       }
       setHistoryLoaded(true);
     };
@@ -58,21 +57,25 @@ export const useAIChat = () => {
   const saveMessages = useCallback(async (newMessages: Message[]) => {
     if (!user) return;
 
-    if (conversationId) {
-      await supabase
-        .from("ai_conversations")
-        .update({ messages: newMessages as any, updated_at: new Date().toISOString() })
-        .eq("id", conversationId);
-    } else {
-      const { data } = await supabase
-        .from("ai_conversations")
-        .insert({ user_id: user.uid, messages: newMessages as any })
-        .select()
-        .single();
-      
-      if (data) {
-        setConversationId(data.id);
+    try {
+      if (conversationId) {
+        await supabase
+          .from("ai_conversations")
+          .update({ messages: newMessages as any, updated_at: new Date().toISOString() })
+          .eq("id", conversationId);
+      } else {
+        const { data } = await supabase
+          .from("ai_conversations")
+          .insert({ user_id: user.uid, messages: newMessages as any })
+          .select()
+          .single();
+        
+        if (data) {
+          setConversationId(data.id);
+        }
       }
+    } catch (error) {
+      console.log("Could not save AI conversation:", error);
     }
   }, [user, conversationId]);
 
@@ -80,29 +83,36 @@ export const useAIChat = () => {
   const logChat = useCallback(async (question: string, responseTimeMs: number) => {
     if (!user) return null;
 
-    const { data } = await supabase
-      .from("ai_chat_logs")
-      .insert({
-        user_id: user.uid,
-        question,
-        response_time_ms: responseTimeMs,
-      })
-      .select()
-      .single();
+    try {
+      const { data } = await supabase
+        .from("ai_chat_logs")
+        .insert({
+          user_id: user.uid,
+          question,
+          response_time_ms: responseTimeMs,
+        })
+        .select()
+        .single();
 
-    return data?.id || null;
+      return data?.id || null;
+    } catch (error) {
+      console.log("Could not log AI chat:", error);
+      return null;
+    }
   }, [user]);
 
   // Rate response
   const rateResponse = useCallback(async (rating: number) => {
     if (!lastLogId) return;
 
-    await supabase
-      .from("ai_chat_logs")
-      .update({ satisfaction_rating: rating })
-      .eq("id", lastLogId);
-
-    setLastLogId(null);
+    try {
+      await supabase
+        .from("ai_chat_logs")
+        .update({ satisfaction_rating: rating })
+        .eq("id", lastLogId);
+    } catch (error) {
+      console.log("Could not rate AI response:", error);
+    }
   }, [lastLogId]);
 
   const sendMessage = useCallback(async (input: string) => {
@@ -238,11 +248,15 @@ export const useAIChat = () => {
     setMessages([]);
     setLastLogId(null);
     if (conversationId) {
-      await supabase
-        .from("ai_conversations")
-        .delete()
-        .eq("id", conversationId);
-      setConversationId(null);
+      try {
+        await supabase
+          .from("ai_conversations")
+          .delete()
+          .eq("id", conversationId);
+        setConversationId(null);
+      } catch (error) {
+        console.log("Could not clear AI conversation:", error);
+      }
     }
   }, [conversationId]);
 

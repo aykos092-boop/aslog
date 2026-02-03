@@ -148,6 +148,10 @@ const translations: Record<Language, Record<string, string>> = {
     "favorites.carriers": "Избранные перевозчики",
     "favorites.empty": "У вас пока нет избранных перевозчиков",
     
+    // Wallet
+    "wallet.deposit": "Пополнить баланс",
+    "wallet.balance": "Баланс",
+    
     // Stats
     "stats.outOf": "из",
     "stats.noRating": "Нет отзывов",
@@ -725,6 +729,10 @@ const translations: Record<Language, Record<string, string>> = {
     "favorites.carriers": "Sevimli haydovchilar",
     "favorites.empty": "Sizda hali sevimli haydovchilar yo'q",
     
+    // Wallet
+    "wallet.deposit": "Balansni to'ldirish",
+    "wallet.balance": "Balans",
+    
     // Stats
     "stats.outOf": "dan",
     "level.beginner": "Yangi",
@@ -1295,6 +1303,10 @@ const translations: Record<Language, Record<string, string>> = {
     "favorites.carriers": "Favorite Carriers",
     "favorites.empty": "You don't have any favorite carriers yet",
     
+    // Wallet
+    "wallet.deposit": "Deposit Balance",
+    "wallet.balance": "Balance",
+    
     // Stats
     "stats.outOf": "of",
     "level.beginner": "Beginner",
@@ -1495,6 +1507,36 @@ const translations: Record<Language, Record<string, string>> = {
     "admin.avgRating": "Average Rating",
     "admin.growth": "Weekly Growth",
     "admin.verified": "Verified",
+    
+    // Subscription
+    "subscription.title": "Подписка",
+    "subscription.subtitle": "Управляйте своим планом подписки",
+    "subscription.features.title": "Преимущества подписки",
+    "subscription.basic.title": "Базовый",
+    "subscription.pro.title": "Профи",
+    "subscription.enterprise.title": "Enterprise",
+    "subscription.basic.features": [
+      "До 5 заказов в месяц",
+      "Базовая поддержка",
+      "Стандартный чат"
+    ],
+    "subscription.pro.features": [
+      "Неограниченные заказы",
+      "Приоритетная поддержка",
+      "Расширенная аналитика",
+      "GPS трекинг в реальном времени",
+      "Продвинутый чат с AI"
+    ],
+    "subscription.enterprise.features": [
+      "Все возможности Профи",
+      "API доступ",
+      "Персональный менеджер",
+      "Кастомизация под бизнес",
+      "Белый лейбл"
+    ],
+    "subscription.upgrade": "Улучшить план",
+    "subscription.current": "Текущий план",
+    "subscription.buyNow": "Купить сейчас",
     "admin.pending": "Pending Review",
     "admin.verify": "Verify",
     "admin.unverify": "Remove Verification",

@@ -18,6 +18,16 @@ export const BRAND_CONFIG = {
   website: "https://asloguz.com",
   support: "mailto:support@asloguz.com",
   
+  // SEO Configuration
+  seo: {
+    title: "Asloguz Logistics - Professional Transportation Solutions",
+    description: "Complete logistics management platform for Central Asia. Real-time tracking, route optimization, and secure cargo transportation.",
+    keywords: "logistics,transportation,cargo,shipping,central asia,uzbekistan,kazakhstan",
+    author: "Asloguz Logistics Team",
+    ogImage: "/og-image.png",
+    twitterCard: "summary_large_image",
+  },
+  
   // Social media
   social: {
     facebook: "https://facebook.com/asloguz",
@@ -74,3 +84,6 @@ export const BRAND_CONFIG = {
 } as const;
 
 export type BrandConfig = typeof BRAND_CONFIG;
+
+// Backward compatibility export
+export const BRAND = BRAND_CONFIG;

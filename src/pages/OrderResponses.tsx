@@ -7,7 +7,7 @@ import {
   User, Star, Clock, CheckCircle, Loader2, MessageSquare, Banknote 
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useToast } from "@/hooks/use-toast";
 
 import { Button } from "@/components/ui/button";
@@ -73,7 +73,7 @@ interface Response {
 const OrderResponses = () => {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   const { toast } = useToast();
 
   const [order, setOrder] = useState<Order | null>(null);
@@ -95,7 +95,7 @@ const OrderResponses = () => {
         .from("orders")
         .select("*")
         .eq("id", orderId)
-        .eq("client_id", user.id)
+        .eq("client_id", user?.uid || "")
         .single();
 
       if (orderError || !orderData) {
@@ -179,7 +179,7 @@ const OrderResponses = () => {
       .from("deals")
       .insert({
         order_id: order.id,
-        client_id: user.id,
+        client_id: user?.uid || "",
         carrier_id: selectedResponse.carrier_id,
         agreed_price: selectedResponse.price,
         status: "pending",
@@ -215,7 +215,7 @@ const OrderResponses = () => {
       .from("messages")
       .insert({
         deal_id: dealData.id,
-        sender_id: user.id,
+        sender_id: user?.uid || "",
         content: "Сделка создана. Перевозчик назначен.",
         is_system: true,
       });

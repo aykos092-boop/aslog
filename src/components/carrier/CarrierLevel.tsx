@@ -4,7 +4,7 @@ import {
   Check, Lock, Loader2, ChevronRight
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -81,7 +81,7 @@ const levels: LevelConfig[] = [
 ];
 
 export const CarrierLevel = () => {
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   const { t } = useLanguage();
   const [completedDeals, setCompletedDeals] = useState(0);
   const [loading, setLoading] = useState(true);

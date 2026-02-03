@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { 
   Users, Truck, TrendingUp, ArrowLeft, 
-  Shield, Loader2, Tag, Bot, FileCheck, Clock, UserCheck, CreditCard
+  Shield, Loader2, Tag, Bot, FileCheck, Clock, UserCheck, CreditCard, DollarSign, FileText
 } from "lucide-react";
 import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -18,6 +18,9 @@ import { AuditLogsTable } from "@/components/admin/AuditLogsTable";
 import { RegistrationRequestsTable } from "@/components/admin/RegistrationRequestsTable";
 import { AdminRolesManager } from "@/components/admin/AdminRolesManager";
 import { SubscriptionsManager } from "@/components/admin/SubscriptionsManager";
+import { PaymentManager } from "@/components/admin/PaymentManager";
+import MonetizationDashboard from "@/components/admin/MonetizationDashboard";
+import { DocumentsManager } from "@/components/admin/DocumentsManager";
 import { LanguageSwitcher } from "@/components/ui/LanguageSwitcher";
 import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
 
@@ -102,6 +105,11 @@ const AdminDashboard = () => {
                 <span className="text-xs sm:text-sm hidden md:inline">Subscriptions</span>
                 <span className="text-xs sm:text-sm md:hidden">Subs</span>
               </TabsTrigger>
+              <TabsTrigger value="payments" className="gap-1 sm:gap-2 py-2 sm:py-2.5 px-2 sm:px-3">
+                <DollarSign className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="text-xs sm:text-sm hidden md:inline">Payments</span>
+                <span className="text-xs sm:text-sm md:hidden">Pay</span>
+              </TabsTrigger>
               <TabsTrigger value="roles" className="gap-1 sm:gap-2 py-2 sm:py-2.5 px-2 sm:px-3">
                 <Shield className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span className="text-xs sm:text-sm">RBAC</span>
@@ -118,6 +126,16 @@ const AdminDashboard = () => {
                 <Bot className="w-3 h-3 sm:w-4 sm:h-4" />
                 <span className="text-xs sm:text-sm">AI</span>
               </TabsTrigger>
+              <TabsTrigger value="monetization" className="gap-1 sm:gap-2 py-2 sm:py-2.5 px-2 sm:px-3">
+                <DollarSign className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="text-xs sm:text-sm hidden md:inline">Monetization</span>
+                <span className="text-xs sm:text-sm md:hidden">$</span>
+              </TabsTrigger>
+              <TabsTrigger value="documents" className="gap-1 sm:gap-2 py-2 sm:py-2.5 px-2 sm:px-3">
+                <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="text-xs sm:text-sm hidden md:inline">Documents</span>
+                <span className="text-xs sm:text-sm md:hidden">Docs</span>
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -127,10 +145,13 @@ const AdminDashboard = () => {
           <TabsContent value="registrations"><RegistrationRequestsTable /></TabsContent>
           <TabsContent value="kyc"><EnhancedKYCDashboard /></TabsContent>
           <TabsContent value="subscriptions"><SubscriptionsManager /></TabsContent>
+          <TabsContent value="payments"><PaymentManager /></TabsContent>
           <TabsContent value="roles"><AdminRolesManager /></TabsContent>
           <TabsContent value="audit"><AuditLogsTable /></TabsContent>
           <TabsContent value="promos"><PromoCodesManager /></TabsContent>
           <TabsContent value="ai"><AIChatAnalytics /></TabsContent>
+          <TabsContent value="monetization"><MonetizationDashboard /></TabsContent>
+          <TabsContent value="documents"><DocumentsManager /></TabsContent>
         </Tabs>
       </main>
     </div>

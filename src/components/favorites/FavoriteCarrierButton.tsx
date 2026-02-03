@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Heart, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -17,7 +17,7 @@ export const FavoriteCarrierButton = ({
   variant = "icon",
   className,
 }: FavoriteCarrierButtonProps) => {
-  const { user, role } = useAuth();
+  const { user, role } = useFirebaseAuth();
   const { toast } = useToast();
   const [isFavorite, setIsFavorite] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -32,7 +32,7 @@ export const FavoriteCarrierButton = ({
     const { data } = await supabase
       .from("favorite_carriers")
       .select("id")
-      .eq("client_id", user!.id)
+      .eq("client_id", user?.uid || "")
       .eq("carrier_id", carrierId)
       .maybeSingle();
     
@@ -48,7 +48,7 @@ export const FavoriteCarrierButton = ({
       const { error } = await supabase
         .from("favorite_carriers")
         .delete()
-        .eq("client_id", user.id)
+        .eq("client_id", user?.uid || "")
         .eq("carrier_id", carrierId);
       
       if (!error) {
@@ -58,7 +58,7 @@ export const FavoriteCarrierButton = ({
     } else {
       const { error } = await supabase
         .from("favorite_carriers")
-        .insert({ client_id: user.id, carrier_id: carrierId });
+        .insert({ client_id: user?.uid || "", carrier_id: carrierId });
       
       if (!error) {
         setIsFavorite(true);

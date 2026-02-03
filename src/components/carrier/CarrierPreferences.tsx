@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Bell, MapPin, Package, Save, Loader2, Plus, X, Weight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,12 +27,12 @@ interface Preferences {
 }
 
 export const CarrierPreferences = () => {
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [preferences, setPreferences] = useState<Preferences>({
-    carrier_id: user?.id || "",
+    carrier_id: user?.uid || "",
     preferred_routes: [],
     preferred_cargo_types: [],
     min_weight: null,
@@ -53,7 +53,7 @@ export const CarrierPreferences = () => {
     const { data, error } = await supabase
       .from("carrier_preferences")
       .select("*")
-      .eq("carrier_id", user.id)
+      .eq("carrier_id", user?.uid || "")
       .single();
 
     if (data) {
@@ -64,7 +64,7 @@ export const CarrierPreferences = () => {
       });
     } else if (!error || error.code === "PGRST116") {
       // No preferences yet, use defaults
-      setPreferences(prev => ({ ...prev, carrier_id: user.id }));
+      setPreferences(prev => ({ ...prev, carrier_id: user?.uid || "" }));
     }
     setLoading(false);
   };
@@ -74,7 +74,7 @@ export const CarrierPreferences = () => {
     setSaving(true);
 
     const prefData = {
-      carrier_id: user.id,
+      carrier_id: user?.uid || "",
       preferred_routes: preferences.preferred_routes,
       preferred_cargo_types: preferences.preferred_cargo_types,
       min_weight: preferences.min_weight,

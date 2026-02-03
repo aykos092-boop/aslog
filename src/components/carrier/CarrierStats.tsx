@@ -4,7 +4,7 @@ import {
   CheckCircle, Clock, Loader2, BarChart3 
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -29,7 +29,7 @@ interface CarrierStatsData {
 }
 
 export const CarrierStats = () => {
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   const { t } = useLanguage();
   const [stats, setStats] = useState<CarrierStatsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,22 +42,25 @@ export const CarrierStats = () => {
     if (!user) return;
 
     try {
-      // Fetch all deals where user is carrier
-      const { data: deals } = await supabase
-        .from("deals")
-        .select("id, status, agreed_price, created_at, completed_at")
-        .eq("carrier_id", user.id);
+      // Fetch deals stats
+      const { data: dealsData, error: dealsError } = await supabase
+        .from('deals')
+        .select('*')
+        .eq('carrier_id', user.uid)
+        .eq('status', 'delivered');
+
+      if (dealsError) throw dealsError;
 
       // Fetch ratings
       const { data: ratings } = await supabase
         .from("ratings")
         .select("score")
-        .eq("rated_id", user.id);
+        .eq("rated_id", user.uid);
 
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      const allDeals = deals || [];
+      const allDeals = dealsData || [];
       const completedDeals = allDeals.filter(d => d.status === "delivered");
       const cancelledDeals = allDeals.filter(d => d.status === "cancelled");
       const inProgressDeals = allDeals.filter(d => 

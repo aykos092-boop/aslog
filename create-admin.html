@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Создание Админа - Swift Ship Connect</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            width: 100%;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Создание Администратора</h1>
+        
+        <div class="info">
+            <strong>ℹ️ Информация:</strong><br>
+            Этот инструмент создаст администратора для доступа к админ-панели Swift Ship Connect.
+        </div>
+
+        <form id="adminForm">
+            <div class="form-group">
+                <label for="email">Email администратора:</label>
+                <input type="email" id="email" value="admin@swiftship.uz" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="password">Пароль:</label>
+                <input type="password" id="password" value="admin123456" required>
+            </div>
+            
+            <button type="submit">🚀 Создать Администратора</button>
+        </form>
+
+        <div id="result" class="result"></div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    
+    <script>
+        // Firebase конфигурация
+        const firebaseConfig = {
+            apiKey: "AIzaSyBuht58TZusVJm4do47LSooBWBGSZErsS8",
+            authDomain: "asialog-2aa38.firebaseapp.com",
+            projectId: "asialog-2aa38",
+            storageBucket: "asialog-2aa38.firebasestorage.app",
+            messagingSenderId: "472239170057",
+            appId: "1:472239170057:web:c5267f425f2ab661520ed8",
+            measurementId: "G-VZWR0QP89W"
+        };
+
+        // Инициализация Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+
+        document.getElementById('adminForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('result');
+            
+            try {
+                console.log('🔥 Создание администратора...');
+                console.log('📧 Email:', email);
+                
+                // Пытаемся создать пользователя
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+                
+                resultDiv.className = 'result success';
+                resultDiv.style.display = 'block';
+                resultDiv.innerHTML = `
+                    <h3>✅ Администратор успешно создан!</h3>
+                    <p><strong>👤 UID:</strong> ${user.uid}</p>
+                    <p><strong>📧 Email:</strong> ${user.email}</p>
+                    <p><strong>🔐 Пароль:</strong> ${password}</p>
+                    <hr>
+                    <h4>🎉 Теперь можете войти в админку:</h4>
+                    <p><strong>🌐 Адрес:</strong> <a href="http://localhost:8081/admin" target="_blank">http://localhost:8081/admin</a></p>
+                    <p><strong>📧 Email:</strong> ${email}</p>
+                    <p><strong>🔐 Пароль:</strong> ${password}</p>
+                    <hr>
+                    <h4>⚠️ Важно:</h4>
+                    <p>1. Сохраните эти данные в надежном месте</p>
+                    <p>2. После входа не забудьте добавить роль "admin" в базе данных Supabase</p>
+                    <p>3. Проверьте что пользователь с ролью "admin" существует в таблице user_roles</p>
+                `;
+                
+            } catch (error) {
+                if (error.code === 'auth/email-already-in-use') {
+                    console.log('⚠️ Пользователь уже существует. Пробуем войти...');
+                    
+                    try {
+                        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                        resultDiv.className = 'result success';
+                        resultDiv.style.display = 'block';
+                        resultDiv.innerHTML = `
+                            <h3>✅ Пользователь существует и пароль верный!</h3>
+                            <p><strong>👤 UID:</strong> ${userCredential.user.uid}</p>
+                            <p><strong>📧 Email:</strong> ${userCredential.user.email}</p>
+                            <hr>
+                            <h4>🎉 Используйте эти данные для входа:</h4>
+                            <p><strong>🌐 Адрес:</strong> <a href="http://localhost:8081/admin" target="_blank">http://localhost:8081/admin</a></p>
+                            <p><strong>📧 Email:</strong> ${email}</p>
+                            <p><strong>🔐 Пароль:</strong> ${password}</p>
+                            <hr>
+                            <h4>⚠️ Если не заходит в админку:</h4>
+                            <p>1. Проверьте что у пользователя есть роль "admin" в Supabase</p>
+                            <p>2. Выполните SQL: <code>INSERT INTO user_roles (user_id, role) VALUES ('${userCredential.user.uid}', 'admin');</code></p>
+                        `;
+                    } catch (signInError) {
+                        resultDiv.className = 'result error';
+                        resultDiv.style.display = 'block';
+                        resultDiv.innerHTML = `
+                            <h3>❌ Ошибка входа</h3>
+                            <p><strong>Ошибка:</strong> ${signInError.message}</p>
+                            <hr>
+                            <h4>💡 Решения:</h4>
+                            <p>1. Пользователь существует но с другим паролем</p>
+                            <p>2. Попробуйте другой пароль</p>
+                            <p>3. Сбросьте пароль в Firebase Console</p>
+                            <p>4. Создайте нового пользователя с другим email</p>
+                        `;
+                    }
+                } else {
+                    resultDiv.className = 'result error';
+                    resultDiv.style.display = 'block';
+                    resultDiv.innerHTML = `
+                        <h3>❌ Ошибка создания пользователя</h3>
+                        <p><strong>Код ошибки:</strong> ${error.code}</p>
+                        <p><strong>Сообщение:</strong> ${error.message}</p>
+                    `;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -46,14 +46,10 @@ export const FirebaseAuthProvider = ({ children }: { children: ReactNode }) => {
         .from("user_roles")
         .select("role")
         .eq("user_id", userId)
+        .limit(1)
         .single();
 
       if (error) {
-        // It's okay if user doesn't have a role yet (new user)
-        if (error.code === 'PGRST116') {
-          console.log('No role found for user:', userId);
-          return null;
-        }
         console.error("Error fetching role:", error);
         return null;
       }

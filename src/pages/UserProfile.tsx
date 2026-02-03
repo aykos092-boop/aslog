@@ -4,10 +4,11 @@ import { format } from "date-fns";
 import { ru, enUS } from "date-fns/locale";
 import {
   ArrowLeft, User, Truck, Star, Shield,
-  CheckCircle, Clock, TrendingUp, Award, Loader2, Quote, Pencil
+  CheckCircle, Clock, TrendingUp, Award, Loader2, Quote, Pencil,
+  Wallet, CreditCard, Plus, ArrowUpRight, ArrowDownRight
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -59,7 +60,7 @@ type UserRole = "client" | "carrier" | "admin";
 const UserProfile = () => {
   const { userId } = useParams<{ userId: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   const { t, language } = useLanguage();
   
   const dateLocale = language === "ru" ? ru : language === "uz" ? ru : enUS;
@@ -78,8 +79,11 @@ const UserProfile = () => {
   const [stats, setStats] = useState<Stats>({ totalDeals: 0, completedDeals: 0, activeDeals: 0, totalOrders: 0 });
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [balance, setBalance] = useState(0);
+  const [frozenBalance, setFrozenBalance] = useState(0);
+  const [subscription, setSubscription] = useState<any>(null);
 
-  const targetUserId = userId || user?.id;
+  const targetUserId = userId || user?.uid;
 
   const fetchProfile = async () => {
     if (!targetUserId) return;
@@ -95,6 +99,9 @@ const UserProfile = () => {
 
       if (profileData) {
         setProfile(profileData);
+        // Set balance and frozen balance from profile
+        setBalance(profileData.balance || 0);
+        setFrozenBalance(profileData.frozen_balance || 0);
       }
 
       // Fetch role
@@ -202,7 +209,7 @@ const UserProfile = () => {
     : 0;
 
   const trustLevel = getTrustLevel(avgRating, stats.completedDeals);
-  const isOwnProfile = user?.id === targetUserId;
+  const isOwnProfile = user?.uid === targetUserId;
 
   const roleConfig = {
     client: { label: t("role.client"), icon: User, color: "bg-customer text-white" },
@@ -320,6 +327,52 @@ const UserProfile = () => {
           </CardContent>
         </Card>
         )}
+
+        {/* Balance Cards - NEW */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <Wallet className="w-8 h-8 mx-auto mb-2 text-primary" />
+              <div className="text-2xl font-bold">{(balance / 1000000).toFixed(2)}M UZS</div>
+              <p className="text-sm text-muted-foreground">Баланс</p>
+              {isOwnProfile && (
+                <div className="mt-2 space-x-2">
+                  <Button size="sm" variant="outline" onClick={() => navigate('/wallet/deposit')}>
+                    <Plus className="w-3 h-3 mr-1" />
+                    Пополнить
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => navigate('/wallet/withdraw')}>
+                    <ArrowUpRight className="w-3 h-3 mr-1" />
+                    Вывести
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <CreditCard className="w-8 h-8 mx-auto mb-2 text-orange-500" />
+              <div className="text-2xl font-bold">{(frozenBalance / 1000000).toFixed(2)}M UZS</div>
+              <p className="text-sm text-muted-foreground">Заморожено</p>
+              <p className="text-xs text-muted-foreground">В сделках</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6 text-center">
+              <Shield className="w-8 h-8 mx-auto mb-2 text-green-500" />
+              <div className="text-2xl font-bold">
+                {subscription ? subscription.name : 'Нет подписки'}
+              </div>
+              <p className="text-sm text-muted-foreground">Подписка</p>
+              {isOwnProfile && !subscription && (
+                <Button size="sm" variant="outline" onClick={() => navigate('/subscriptions')} className="mt-2">
+                  <Plus className="w-3 h-3 mr-1" />
+                  Оформить
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

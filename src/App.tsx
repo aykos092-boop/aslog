@@ -9,11 +9,13 @@ import { FirebaseAuthProvider } from "@/contexts/FirebaseAuthContext";
 import { EmailVerificationWrapper } from "@/components/auth/EmailVerificationWrapper";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import TelegramRegister from "./pages/TelegramRegister";
 import Dashboard from "./pages/Dashboard";
 import OrderResponses from "./pages/OrderResponses";
 import OrderChat from "./pages/OrderChat";
 import DealChat from "./pages/DealChat";
 import UserProfile from "./pages/UserProfile";
+import EnhancedUserProfile from "./pages/EnhancedUserProfile-Clean";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminLogin from "./pages/AdminLogin";
 import ApiDocs from "./pages/ApiDocs";
@@ -23,6 +25,13 @@ import UnifiedNavigator from "./pages/UnifiedNavigator";
 import ClientTracking from "./pages/ClientTracking";
 import { LogisticsDashboard } from "./pages/LogisticsDashboard";
 import { ShowcaseMap } from "./pages/ShowcaseMap";
+import SimpleWalletDeposit from "./pages/SimpleWalletDeposit";
+import SimpleWalletWithdraw from "./pages/SimpleWalletWithdraw";
+import EnhancedWalletDeposit from "./pages/EnhancedWalletDeposit";
+import EnhancedWalletWithdraw from "./pages/EnhancedWalletWithdraw";
+import ModernWalletDeposit from "./pages/ModernWalletDeposit";
+import SubscriptionsPage from "./pages/SubscriptionsPage";
+import WMSDashboardPage from "./pages/WMSDashboard";
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './components/map/MapboxGLStyles.css';
 import './components/map/Mapbox3DStyles.css';
@@ -42,6 +51,7 @@ const App = () => (
                 <Routes>
                   <Route path="/" element={<Index />} />
                   <Route path="/login" element={<Auth />} />
+                  <Route path="/telegram-register" element={<TelegramRegister />} />
                   <Route path="/signup" element={<Auth />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/register" element={<Auth />} />
@@ -59,11 +69,20 @@ const App = () => (
                   <Route path="/navigator/deal/:dealId" element={<UnifiedNavigator />} />
                   <Route path="/admin" element={<AdminDashboard />} />
                   <Route path="/subscription" element={<Subscription />} />
-                  <Route path="/profile" element={<UserProfile />} />
-                  <Route path="/profile/:userId" element={<UserProfile />} />
+                  <Route path="/subscriptions" element={<SubscriptionsPage />} />
+                  <Route path="/profile" element={<EnhancedUserProfile />} />
+                  <Route path="/profile/:userId" element={<EnhancedUserProfile />} />
+                  {/* Wallet routes */}
+                  <Route path="/wallet/deposit" element={<ModernWalletDeposit />} />
+                  <Route path="/wallet/withdraw" element={<EnhancedWalletWithdraw />} />
+                  <Route path="/wallet/simple/deposit" element={<SimpleWalletDeposit />} />
+                  <Route path="/wallet/simple/withdraw" element={<SimpleWalletWithdraw />} />
+                  <Route path="/wallet/enhanced/deposit" element={<EnhancedWalletDeposit />} />
+                  <Route path="/wallet/enhanced/withdraw" element={<EnhancedWalletWithdraw />} />
                   <Route path="/api-docs" element={<ApiDocs />} />
                   <Route path="/logistics" element={<LogisticsDashboard />} />
                   <Route path="/showcase" element={<ShowcaseMap />} />
+                  <Route path="/wms" element={<WMSDashboardPage />} />
                   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                   <Route path="*" element={<NotFound />} />
                 </Routes>

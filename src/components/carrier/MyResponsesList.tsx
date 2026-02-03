@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { Clock, Package, MapPin, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -31,7 +31,7 @@ interface Response {
 }
 
 export const MyResponsesList = () => {
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   const [responses, setResponses] = useState<Response[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -47,7 +47,7 @@ export const MyResponsesList = () => {
           *,
           order:orders(cargo_type, pickup_address, delivery_address, pickup_date, status)
         `)
-        .eq("carrier_id", user.id)
+        .eq("carrier_id", user?.uid || "")
         .order("created_at", { ascending: false });
 
       if (error) {

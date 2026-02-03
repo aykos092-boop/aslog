@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { ru } from "date-fns/locale";
 import { Package, MapPin, Calendar, Weight, Ruler, Send, Loader2, Eye, Search, Filter, X, CalendarIcon, ArrowUpDown, Image as ImageIcon, Banknote, Navigation } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/useAuth";
+import { useFirebaseAuth } from "@/contexts/FirebaseAuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -64,7 +64,7 @@ interface Order {
 
 export const AvailableOrdersList = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user } = useFirebaseAuth();
   const { toast } = useToast();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,7 +108,7 @@ export const AvailableOrdersList = () => {
     const { data: responsesData } = await supabase
       .from("responses")
       .select("order_id")
-      .eq("carrier_id", user.id);
+      .eq("carrier_id", user.uid);
 
     const respondedOrderIds = new Set(responsesData?.map(r => r.order_id) || []);
 
@@ -225,7 +225,7 @@ export const AvailableOrdersList = () => {
 
     const { error } = await supabase.from("responses").insert({
       order_id: selectedOrder.id,
-      carrier_id: user.id,
+      carrier_id: user.uid,
       price: parseFloat(price),
       delivery_time: deliveryTime || null,
       comment: comment || null,
