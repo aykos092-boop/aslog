@@ -27,7 +27,10 @@ export default defineConfig(({ mode }) => ({
           router: ['react-router-dom'],
           ui: ['@radix-ui/react-dialog', '@radix-ui/react-tabs'],
           maps: ['leaflet', 'mapbox-gl']
-        }
+        },
+        entryFileNames: 'assets/[name].[hash].js',
+        chunkFileNames: 'assets/[name].[hash].js',
+        assetFileNames: 'assets/[name].[hash].[ext]'
       }
     },
     chunkSizeWarningLimit: 1000,
