@@ -20,16 +20,16 @@
       "destination": "/assets/$1"
     },
     {
-      "source": "/(.*\\.(js|ts|jsx|tsx|mjs))",
-      "destination": "/$1"
+      "source": "/robots.txt",
+      "destination": "/robots.txt"
     },
     {
-      "source": "/(.*\\.(css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot))",
-      "destination": "/$1"
+      "source": "/sitemap.xml",
+      "destination": "/sitemap.xml"
     },
     {
-      "source": "/(robots.txt|sitemap.xml|favicon.ico|manifest.json)",
-      "destination": "/$1"
+      "source": "/favicon.ico",
+      "destination": "/favicon.ico"
     },
     {
       "source": "/(.*)",
@@ -47,46 +47,11 @@
       ]
     },
     {
-      "source": "/(.*\\.(js|ts|jsx|tsx|mjs))",
+      "source": "/(.*)",
       "headers": [
         {
-          "key": "Content-Type",
-          "value": "application/javascript"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000"
-        }
-      ]
-    },
-    {
-      "source": "/(.*\\.(css))",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "text/css"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000"
-        }
-      ]
-    },
-    {
-      "source": "/(.*\\.(png|jpg|jpeg|gif|ico|svg|webp))",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000"
-        }
-      ]
-    },
-    {
-      "source": "/(.*\\.(woff|woff2|ttf|eot))",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000"
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
         }
       ]
     }
