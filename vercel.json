@@ -70,10 +70,5 @@
       "destination": "https://asloguz.com/:path*",
       "permanent": true
     }
-  ],
-  "functions": {
-    "supabase/functions/**": {
-      "runtime": "nodejs18.x"
-    }
-  }
+  ]
 }
