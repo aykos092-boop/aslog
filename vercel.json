@@ -14,26 +14,26 @@
       }
     }
   ],
-  "routes": [
+  "rewrites": [
     {
-      "src": "/assets/(.*)",
-      "dest": "/assets/$1"
+      "source": "/assets/(.*)",
+      "destination": "/assets/$1"
     },
     {
-      "src": "/(.*\\.(js|ts|jsx|tsx|mjs))",
-      "dest": "/$1"
+      "source": "/(.*\\.(js|ts|jsx|tsx|mjs))",
+      "destination": "/$1"
     },
     {
-      "src": "/(.*\\.(css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot))",
-      "dest": "/$1"
+      "source": "/(.*\\.(css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot))",
+      "destination": "/$1"
     },
     {
-      "src": "/(robots.txt|sitemap.xml|favicon.ico|manifest.json)",
-      "dest": "/$1"
+      "source": "/(robots.txt|sitemap.xml|favicon.ico|manifest.json)",
+      "destination": "/$1"
     },
     {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ],
   "headers": [
